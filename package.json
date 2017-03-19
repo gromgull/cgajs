@@ -1,0 +1,13 @@
+{
+  "name": "cgajs",
+  "version": "0.0.1",
+  "description": "A Esri CGA rule parser/processor in Javascript",
+  "main": "index.js",
+  "author": "Gunnar Aastrand Grimnes",
+  "license": "BSD",
+  "devDependencies": {
+    "pegjs": "^0.10.0",
+    "three.js": "^0.77.1",
+    "webpack": "^2.2.1"
+  }
+}
