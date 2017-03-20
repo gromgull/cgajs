@@ -12,7 +12,7 @@ float = [0-9]+ "." [0-9]+ { return parseFloat(text()) }
 
 relative = "'" value:( float / int ) { return new cga.Relative( value ); }
 
-float = "'" value:( float / int ) { return new cga.Float( value ); }
+floating = "'" value:( float / int ) { return new cga.Floating( value ); }
 
 comma = _ "," _
 

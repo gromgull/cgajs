@@ -21,9 +21,9 @@ Relative.prototype.toString = function() {
   return 'Relative({value}'.format(this);
 };
 
-function Float(value) { this.value = value; }
-Float.prototype.toString = function() {
-  return 'Float({value}'.format(this);
+function Floating(value) { this.value = value; }
+Floating.prototype.toString = function() {
+  return 'Floating({value}'.format(this);
 };
 
 
