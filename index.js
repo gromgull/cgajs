@@ -111,14 +111,16 @@ function setup() {
     for( var i = group.children.length - 1; i >= 0; i--) group.remove(group.children[i]);
 
     var res = cgaprocessor.process(grammar, lot);
-    res.computeFaceNormals();
-    res.computeVertexNormals();
-
     console.log(res);
 
-    var mesh = new THREE.Mesh(res, material);
-    mesh.castShadow = true;
-    group.add(mesh);
+    res.forEach(r => {
+      r.computeFaceNormals();
+      r.computeVertexNormals();
+
+      var mesh = new THREE.Mesh(r, material);
+      mesh.castShadow = true;
+      group.add(mesh);
+    });
 
   }
 
