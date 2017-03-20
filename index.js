@@ -13,7 +13,7 @@ function $(sel) {
 
 function setup() {
   var scene = new THREE.Scene();
-  var camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
+  var camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 0.1, 1000 );
   scene.fog = new THREE.FogExp2( 0x000000, 0.002, 3000 );
   var canvas = $('canvas');
   var renderer = new THREE.WebGLRenderer({ canvas: canvas });
@@ -24,6 +24,7 @@ function setup() {
   var material = new THREE.MeshLambertMaterial( { color: 0x6699ff } );
 
   var controls = new OrbitControls( camera, renderer.domElement );
+  controls.autoRotate=true;
 
   var cube = new THREE.Mesh( geometry, material );
   cube.castShadow = true;
@@ -50,45 +51,28 @@ function setup() {
   camera.rotation.x = -0.5;
 
   renderer.shadowMap.enabled = true;
-  //renderer.shadowMap.type = THREE.PCFSoftShadowMap; // default THREE.PCFShadowMap
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap; // default THREE.PCFShadowMap
 
   //Create a DirectionalLight and turn on shadows for the light
   var light = new THREE.DirectionalLight( 0xffffff, 1, 100 );
   light.position.set( 3, 2, 3); 			//default; light shining from top
 
   light.castShadow = true;            // default false
-  scene.add( light );
-
   //Set up shadow properties for the light
   light.shadow.mapSize.width = 1024;
   light.shadow.mapSize.height = 1024;
-  // light.shadow.camera.near = 0.1;       // default
-  // light.shadow.camera.far = 500;      // default
-  // light.shadow.camera.right     =  5;
-  // light.shadow.camera.left     = -5;
-  // light.shadow.camera.top      =  5;
-  // light.shadow.camera.bottom   = -5;
-  light.shadow.camera.visible = true;
-  // // create a point light
-  // const pointLight =
-  //       new THREE.PointLight(0xFFFFFF);
 
-  // // set its position
-  // pointLight.position.x = 10;
-  // pointLight.position.y = 50;
-  // pointLight.position.z = 130;
 
-  // // add to the scene
-  // scene.add(pointLight);
-//Create a helper for the shadow camera (optional)
-var helper = new THREE.CameraHelper( light.shadow.camera );
-scene.add( helper );
+  scene.add( light );
+
+
+  // //Create a helper for the shadow camera (optional)
+  // var helper = new THREE.CameraHelper( light.shadow.camera );
+  // scene.add( helper );
   scene.add(new THREE.AmbientLight( 0x404040 )); // soft white light
 
   function render() {
-
-    group.rotation.y += 0.01;
-
+    controls.update();
 	requestAnimationFrame( render );
 	renderer.render( scene, camera );
   }
@@ -99,14 +83,15 @@ scene.add( helper );
     var res;
     try {
       res = cgaparser.parse($('textarea').value);
+      $('#out').innerHTML = String(res);
+
+      update(res);
+
     } catch (e) {
       $('#error').innerHTML=e;
       return ;
     }
 
-    $('#out').innerHTML = String(res);
-
-    update(res);
 
   });
 
