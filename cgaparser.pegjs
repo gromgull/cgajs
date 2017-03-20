@@ -7,14 +7,16 @@ _ = [ \t\r\n]*
 ws = [ \t]
 nl = "\n"
 
-int = [0-9]+ { return parseInt(text()) }
-float = [0-9]+ "." [0-9]+ { return parseFloat(text()) }
+int = "-"?[0-9]+ { return parseInt(text()) }
+float = "-"?[0-9]+ "." [0-9]+ { return parseFloat(text()) }
 
 relative = "'" value:( float / int ) { return new cga.Relative( value ); }
 
 floating = "'" value:( float / int ) { return new cga.Floating( value ); }
 
 comma = _ "," _
+
+colon = ":"
 
 literal = float / int
 
@@ -25,12 +27,17 @@ ident = $([a-zA-Z][a-zA-Z0-9]*)
 comment
   = "/*" [^*]* "*"+ ([^/*] [^*]* "*"+)* "/"
 
-func = name:ident params:( "("
+func = name:ident params:( "(" _
       head:expr
-      tail:(comma v:expr { return v; })* ")"
-      { return [head].concat(tail); }  )? { return new cga.Function(name, params ); }
+      tail:(comma v:expr { return v; })* _ ")"
+      { return [head].concat(tail); }  )? _
+      body:( "{" body:( body_expr * ) "}" { return body; } )?
 
-expr = func / float / int / relative
+      { return new cga.Function(name, params, body ); }
+
+body_expr = _ p:(colon / expr) _ { return p; }
+
+expr = func / float / int / relative / axis
 
 attr = "attr" ws variable:ident _ "=" _ value:literal _ { var res = {}; res[variable] = value; return res; }
 

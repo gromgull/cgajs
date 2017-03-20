@@ -27,9 +27,9 @@ Floating.prototype.toString = function() {
 };
 
 
-function Function(name, params) { this.name = name; this.params = params;}
+function Function(name, params, body) { this.name = name; this.params = params; this.body = body;}
 Function.prototype.toString = function() {
-  return 'Function({name}, {params})'.format(this);
+  return 'Function({name}, {params}, {body})'.format(this);
 };
 
 
