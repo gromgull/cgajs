@@ -2,7 +2,7 @@ module.exports = {
   context: '.',
   entry: './index.js',
   output: {
-    filename: 'bundle.js',
+    filename: 'build/bundle.js',
   },
   devtool: '#source-map'
 };
