@@ -3,11 +3,13 @@ var cgaparser = require('./cgaparser.js');
 
 function t(e) {
   try {
+    console.log("Doing", e);
     var r = cgaparser.parse(e);
     console.dir(r, { depth: null });
   } catch (e) {
-    console.log(e.location);
     console.error(e);
+    console.log(e.location);
+
   }
 }
 
@@ -17,5 +19,7 @@ t('Lot --> Cake s(3.4)\n');
 t('Lot --> Cake s(3)\n');
 t('Lot --> Cake s(\'3)\n');
 t('Lot --> Cake s(\'3.4)\n');
+
+t('Lot --> s(\'rand(0.2,1.5), \'rand(0.2, 1.5), \'rand(0.2, 1.5))\n');
 
 t('Lot --> split(y) { 4 : Floor }\n');

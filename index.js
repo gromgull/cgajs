@@ -15,7 +15,7 @@ function setup() {
   var canvas = $('canvas');
 
   var scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2( 0x000044, 0.09 );
+  scene.fog = new THREE.FogExp2( 0x112244, 0.09 );
 
   var camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 0.1, 1000 );
   camera.position.z = 5;
@@ -97,6 +97,7 @@ function setup() {
       update(res);
 
     } catch (e) {
+      console.log(e);
       $('#error').innerHTML=e;
       return ;
     }

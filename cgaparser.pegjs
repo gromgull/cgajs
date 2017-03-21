@@ -10,9 +10,9 @@ nl = "\n"
 int = "-"?[0-9]+ { return parseInt(text()) }
 float = "-"?[0-9]+ "." [0-9]+ { return parseFloat(text()) }
 
-relative = "'" value:( float / int ) { return new cga.Relative( value ); }
+relative = "'" value:expr { return new cga.Relative( value ); }
 
-floating = "'" value:( float / int ) { return new cga.Floating( value ); }
+floating = "'" value:expr { return new cga.Floating( value ); }
 
 comma = _ "," _
 

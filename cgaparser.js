@@ -608,10 +608,7 @@ function peg$parse(input, options) {
       if (peg$silentFails === 0) { peg$fail(peg$c16); }
     }
     if (s1 !== peg$FAILED) {
-      s2 = peg$parsefloat();
-      if (s2 === peg$FAILED) {
-        s2 = peg$parseint();
-      }
+      s2 = peg$parseexpr();
       if (s2 !== peg$FAILED) {
         peg$savedPos = s0;
         s1 = peg$c17(s2);
@@ -640,10 +637,7 @@ function peg$parse(input, options) {
       if (peg$silentFails === 0) { peg$fail(peg$c16); }
     }
     if (s1 !== peg$FAILED) {
-      s2 = peg$parsefloat();
-      if (s2 === peg$FAILED) {
-        s2 = peg$parseint();
-      }
+      s2 = peg$parseexpr();
       if (s2 !== peg$FAILED) {
         peg$savedPos = s0;
         s1 = peg$c18(s2);

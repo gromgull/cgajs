@@ -34,7 +34,8 @@ function func_extrude(input, amount) {
 }
 
 function func_scale(input, x,y,z) {
-  return input.clone().scale(x,y,z);
+  // this gets relative objects
+  return input.clone().scale(x.value, y.value, z.value);
 }
 
 function func_translate(input, x,y,z) {
@@ -47,10 +48,73 @@ function func_rotate(input, x,y,z) {
     .rotateZ(THREE.Math.degToRad(z));
 }
 
+function func_rand(_, min, max) {
+  if (!max) { max = min; min = null; }
+  if (!min) min = 0;
+  if (!max) max = 1;
+  return min + Math.random()*(max-min);
+}
+
+
+var FUNCTIONS = { };
+
 
 function isNumeric(n) {
+  isNumeric.type = 'numeric';
   return !isNaN(parseFloat(n)) && isFinite(n);
 }
+
+function isRelative(val) {
+  isRelative.type = 'relative';
+  return val instanceof cga.Relative;
+}
+
+function isFunction(val) {
+  isFunction.type = 'function';
+  return val instanceof cga.Function;
+}
+
+function eval_expr(expr) {
+  if (isNumeric(expr)) return expr;
+  if (isRelative(expr)) {
+    expr.value = eval_expr(expr.value);
+    return expr;
+  }
+  if (isFunction(expr)) {
+    if (!FUNCTIONS[expr.name]) throw "Undefined function '{name}'".format({name:expr.name});
+    return FUNCTIONS[expr.name](null, expr); // object in scope?
+  }
+  throw "Cannot evaluation expression: "+expr;
+}
+function register_func(name, min_params, max_params, validator, hasBody, func) {
+
+  FUNCTIONS[name] = (geometry, f) => {
+
+    var no_params = f.params ? f.params.length : 0;
+
+    if (!max_params && f.params.length)
+      throw 'Function {name} takes no parameters'.format({name:name});
+    else if (!(no_params >= min_params && no_params<=max_params))
+      throw 'Function {name} takes {n}-{m} parameters got {k}'.format({name:name, n:min_params, m:max_params,  k:no_params});
+
+    if ( hasBody && !f.body ) throw 'Function {name} needs a body'.format({name:name});
+    if ( !hasBody && f.body ) throw 'Function {name} does not take a body'.format({name:name});
+
+    params = f.params.map(eval_expr);
+
+    if (!params.every(validator)) throw 'Function {name} requires {type} parameters'.format({name:name, type: validator.type});
+
+    return func.apply( null, [ geometry ].concat( params ) );
+
+  };
+}
+
+
+register_func('s', 3, 3, isRelative, false, func_scale);
+register_func('r', 3, 3, isNumeric, false, func_rotate);
+register_func('t', 3, 3, isNumeric, false, func_translate);
+register_func('extrude', 1, 1, isNumeric, false, func_extrude);
+register_func('rand', 0, 2, isNumeric, false, func_rand);
 
 function process(grammar, lot) {
   var res = [];
@@ -58,24 +122,8 @@ function process(grammar, lot) {
   var rules = {};
 
   function applyFunction(geometry, func) {
-    if (func.name == 's') {
-      if (!func.params || func.params.length!=3) throw 's function takes 3 parameters';
-      if (!func.params.every( p => p instanceof cga.Relative )) throw 'Only relative scaling supported';
-      return func_scale(geometry, func.params[0].value, func.params[1].value, func.params[2].value);
-
-    } else if (func.name == 't') {
-      if (!func.params || func.params.length!=3) throw 't function takes 3 parameters';
-      if (!func.params.every( p => isNumeric(p) )) throw 'Only translating by literal numbers is supported';
-      return func_translate(geometry, func.params[0], func.params[1], func.params[2]);
-
-    } else if (func.name == 'r') {
-      if (!func.params || func.params.length!=3) throw 'r function takes 3 parameters';
-      if (!func.params.every( p => isNumeric(p) )) throw 'Only rotating by literal numbers is supported';
-      return func_rotate(geometry, func.params[0], func.params[1], func.params[2]);
-
-    } else if (func.name == 'extrude') {
-      if (func.params.length!=1) throw 'extrude function takes 1 parameters';
-      return func_extrude(geometry, func.params[0].value);
+    if (FUNCTIONS[func.name]) {
+      return FUNCTIONS[func.name](geometry, func);
     } else {
       if (func.params === null) {
         return applyRule(rules[func.name], geometry);

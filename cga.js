@@ -18,12 +18,12 @@ Rule.prototype.toString = function() {
 
 function Relative(value) { this.value = value; }
 Relative.prototype.toString = function() {
-  return 'Relative({value}'.format(this);
+  return 'Relative({value})'.format(this);
 };
 
 function Floating(value) { this.value = value; }
 Floating.prototype.toString = function() {
-  return 'Floating({value}'.format(this);
+  return 'Floating({value})'.format(this);
 };
 
 
