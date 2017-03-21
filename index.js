@@ -12,25 +12,47 @@ function $(sel) {
 
 
 function setup() {
-  var scene = new THREE.Scene();
-  var camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 0.1, 1000 );
-  scene.fog = new THREE.FogExp2( 0x000000, 0.002, 3000 );
   var canvas = $('canvas');
-  var renderer = new THREE.WebGLRenderer({ canvas: canvas });
-  renderer.setSize( canvas.clientWidth, canvas.clientHeight );
+
+  var scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2( 0x000044, 0.09 );
+
+  var camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 0.1, 1000 );
+  camera.position.z = 5;
+  camera.position.y = 3;
+  camera.rotation.x = -0.5;
   camera.aspect = canvas.clientWidth / canvas.clientHeight;
+
+  var controls = new OrbitControls( camera, canvas );
+  controls.autoRotate = true;
+  controls.enableZoom = true;
+  controls.maxPolarAngle = Math.PI/2-0.01;
+
+  var renderer = new THREE.WebGLRenderer({ antialias: true, canvas: canvas });
+  renderer.setSize( canvas.clientWidth, canvas.clientHeight );
   renderer.setClearColor( scene.fog.color );
-  var geometry = new THREE.BoxGeometry( 1, 1, 1 );
+  renderer.shadowMap.soft = true;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap; // default THREE.PCFShadowMap
+
+
   var material = new THREE.MeshLambertMaterial( { color: 0x6699ff } );
+  var wire_material = new THREE.LineBasicMaterial( { color: 0xffffff, linewidth: 2 } );
+  var grass_material = new THREE.MeshPhongMaterial( { color: 0x00ff00 } );
 
-  var controls = new OrbitControls( camera, renderer.domElement );
-  controls.autoRotate=true;
+  var group = new THREE.Group();
+  group.castShadow=true;
+  scene.add( group );
 
-  var cube = new THREE.Mesh( geometry, material );
+  var cube = new THREE.Mesh( new THREE.BoxGeometry( 1, 1, 1 ), material );
   cube.castShadow = true;
   cube.position.y = 0.5;
+  group.add(cube);
 
-  var grass_material = new THREE.MeshPhongMaterial( { color: 0x00ff00 } );
+  var wireframe = new THREE.LineSegments( new THREE.EdgesGeometry(cube.geometry), wire_material );
+  wireframe.position.y = 0.5;
+  group.add( wireframe );
+
 
   var plane = new THREE.Mesh(new THREE.PlaneGeometry( 150, 150 ), grass_material);
   plane.receiveShadow = true;
@@ -38,20 +60,7 @@ function setup() {
   plane.position.y = -0.01;
   plane.scale.set(100,100,100);
   scene.add(plane);
-  renderer.shadowMap.soft = true;
 
-  var group = new THREE.Group();
-  group.castShadow=true;
-  group.add(cube);
-
-  scene.add( group );
-
-  camera.position.z = 5;
-  camera.position.y = 2;
-  camera.rotation.x = -0.5;
-
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap; // default THREE.PCFShadowMap
 
   //Create a DirectionalLight and turn on shadows for the light
   var light = new THREE.DirectionalLight( 0xffffff, 1, 100 );
@@ -117,9 +126,15 @@ function setup() {
       r.computeFaceNormals();
       r.computeVertexNormals();
 
+      r = new THREE.BufferGeometry().fromGeometry(r);
+
       var mesh = new THREE.Mesh(r, material);
       mesh.castShadow = true;
       group.add(mesh);
+
+      var wireframe = new THREE.LineSegments( new THREE.EdgesGeometry(r), wire_material );
+      group.add( wireframe );
+
     });
 
   }

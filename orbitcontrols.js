@@ -329,7 +329,7 @@ var OrbitControls = function ( object, domElement ) {
 
 			var element = scope.domElement === document ? scope.domElement.body : scope.domElement;
 
-			if ( scope.object instanceof THREE.PerspectiveCamera ) {
+			if ( scope.object.type == 'PerspectiveCamera' ) {
 
 				// perspective
 				var position = scope.object.position;
@@ -363,7 +363,7 @@ var OrbitControls = function ( object, domElement ) {
 
 	function dollyIn( dollyScale ) {
 
-		if ( scope.object instanceof THREE.PerspectiveCamera ) {
+		if ( scope.object.type == 'PerspectiveCamera' ) {
 
 			scale /= dollyScale;
 
@@ -384,7 +384,7 @@ var OrbitControls = function ( object, domElement ) {
 
 	function dollyOut( dollyScale ) {
 
-		if ( scope.object instanceof THREE.PerspectiveCamera ) {
+		if ( scope.object.type == 'PerspectiveCamera' ) {
 
 			scale *= dollyScale;
 
