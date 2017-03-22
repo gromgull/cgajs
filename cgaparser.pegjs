@@ -17,6 +17,7 @@ floating = "'" value:expr { return new cga.Floating( value ); }
 comma = _ "," _
 
 colon = ":"
+equals = "="
 pipe = "|"
 arrow = "-->"
 
@@ -33,9 +34,13 @@ func = name:ident params:( "(" _
       head:func_expr
       tail:(comma v:expr { return v; })* _ ")"
       { return [head].concat(tail); }  )? _
-      body:( "{" body:( body_expr * ) "}" repeat:"*"? { return new cga.Body(body, repeat); } )?
+      body:block?
 
       { return new cga.Function(name, params, body ); }
+
+block = "{" body:( head:block_op tail:(pipe v:block_op { return v; } )* { return [head].concat(tail); } ) "}" repeat:"*"? { return new cga.Body(body, repeat); }
+
+block_op = _ head:expr _ op:(colon/equals) _ operations:expr* _ { return new cga.OpBlock(head, op, operations); }
 
 func_expr = axis / expr
 body_expr = _ p:(colon / pipe / expr) _ { return p; }

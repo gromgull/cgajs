@@ -46,6 +46,10 @@ Body.prototype.toString = function() {
   return 'Body({parts}, {repeat})'.format(this);
 };
 
+function OpBlock(head, op, operations) { this.head = head; this.op = op; this.operations = operations; }
+OpBlock.prototype.toString = function() {
+  return 'OpBlock({head}, {op}, {operations})'.format(this);
+};
 
 module.exports = {
   CGA: CGA,
@@ -54,5 +58,6 @@ module.exports = {
   Floating: Floating,
   Function: Function,
   Body: Body,
+  OpBlock: OpBlock,
   Axis: Axis,
 };

@@ -186,28 +186,27 @@ function func_split(processor, input, axis, body) {
   input.computeBoundingBox();
   var size = input.boundingBox.max[axis.value]-input.boundingBox.min[axis.value];
 
-  var parts = split_array(body.parts, '|');
+  var parts = body.parts;
   total = 0;
   var sizes = parts.map( p => {
-    if (p.length<3) throw 'Size body part too short: '+p;
-    if (p[1] != ':') throw 'Badly formed size body part, expected "amount : rules" '+p;
-    if (!isValue(p[0])) throw 'Illegal size for split: '+p[0];
+    if (p.op != ':' ) throw 'Illegal split operator, must be : was "{op}"'.format(p);
+    if (!isValue(p.head)) throw 'Illegal size for split: '+p.head;
 
-    var val = eval_expr(processor, p[0]);
+    var val = eval_expr(processor, p.head);
     var floating = false;
     if (isRelative(val)) val = size*val.value;
     if (isFloating(val)) { val = val.value; floating = true; }
 
     total += val;
 
-    return { size: val, operators: p.slice(2), floating: floating };
+    return { size: val, operations: p.operations, floating: floating };
   });
 
   var splits = _compute_splits(sizes, size, body.repeat);
 
   var left = 0;
   splits.forEach( (s,i) => {
-    var last = processor.applyOperators(sizes[i%sizes.length].operators, split_geometry(axis.value, input, left, left+s));
+    var last = processor.applyOperations(sizes[i%sizes.length].operations, split_geometry(axis.value, input, left, left+s));
     if ( ( !processor.res.length || processor.res[processor.res.length-1] != last ) && last ) processor.res.push(last);
     left += s;
   });
@@ -326,7 +325,7 @@ Processor.prototype.applyFunction = function(geometry, func) {
     throw 'Unknown function: '+func.name;
   };
 
-Processor.prototype.applyOperators = function(ops, geometry) {
+Processor.prototype.applyOperations = function(ops, geometry) {
   return ops.reduce((g, f) => this.applyFunction(g,f), geometry);
 };
 
@@ -336,7 +335,7 @@ Processor.prototype.applyRule = function(rule, geometry) {
     this.res.push(geometry.clone());
     return geometry;
   } else if (rule instanceof cga.Rule) {
-    return this.applyOperators(rule.successors, geometry);
+    return this.applyOperations(rule.successors, geometry);
   } else {
     throw "Unknown rule type: "+typeof rule;
   }
