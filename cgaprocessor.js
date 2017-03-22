@@ -158,7 +158,7 @@ function _compute_splits(sizes, size, repeat) {
     }
 
     current += cur.size;
-    res.push(cur.size.size);
+    res.push(cur.size);
 
     i++;
     if (i==sizes.length) {
@@ -193,20 +193,21 @@ function func_split(processor, input, axis, body) {
     if (p[1] != ':') throw 'Badly formed size body part, expected "amount : rules" '+p;
     if (!isValue(p[0])) throw 'Illegal size for split: '+p[0];
 
-    var val = { size: eval_expr(p[0]) };
-    if (isRelative(val)) val.size = size*val.size.value;
-    if (isFloating(val)) { val.size = val.size.value; val.floating = true; }
+    var val = eval_expr(p[0]);
+    var floating = false;
+    if (isRelative(val)) val = size*val.value;
+    if (isFloating(val)) { val = val.value; floating = true; }
 
-    total += val.size;
+    total += val;
 
-    return { size: val, operators: p.slice(2) };
+    return { size: val, operators: p.slice(2), floating: floating };
   });
 
   var splits = _compute_splits(sizes, size, body.repeat);
 
   var left = 0;
   splits.forEach( (s,i) => {
-    processor.applyOperators(sizes[i].operators, split_geometry(axis.value, input, left, left+s));
+    processor.applyOperators(sizes[i%sizes.length].operators, split_geometry(axis.value, input, left, left+s));
     left += s;
   });
 
