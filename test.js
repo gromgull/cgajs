@@ -23,3 +23,6 @@ t('Lot --> Cake s(\'3.4)\n');
 t('Lot --> s(\'rand(0.2,1.5), \'rand(0.2, 1.5), \'rand(0.2, 1.5))\n');
 
 t('Lot --> split(y) { 4 : Floor }\n');
+t('Lot --> split(y) { 4 : Floor }*\n');
+
+t('Lot --> split(y) { 4 : Floor | 3: Floor }*\n');

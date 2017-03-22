@@ -1,3 +1,5 @@
+require('./format')
+
 function CGA(attrs, rules) {
   this.attrs = attrs;
   this.rules = rules;
@@ -21,6 +23,13 @@ Relative.prototype.toString = function() {
   return 'Relative({value})'.format(this);
 };
 
+
+function Axis(value) { this.value = value; }
+Axis.prototype.toString = function() {
+  return 'Axis({value})'.format(this);
+};
+
+
 function Floating(value) { this.value = value; }
 Floating.prototype.toString = function() {
   return 'Floating({value})'.format(this);
@@ -32,10 +41,18 @@ Function.prototype.toString = function() {
   return 'Function({name}, {params}, {body})'.format(this);
 };
 
+function Body(parts, repeat) { this.parts = parts; this.repeat = repeat;  }
+Body.prototype.toString = function() {
+  return 'Body({parts}, {repeat})'.format(this);
+};
+
 
 module.exports = {
   CGA: CGA,
   Rule: Rule,
   Relative: Relative,
-  Function: Function
+  Floating: Floating,
+  Function: Function,
+  Body: Body,
+  Axis: Axis,
 };
