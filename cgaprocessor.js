@@ -207,7 +207,8 @@ function func_split(processor, input, axis, body) {
 
   var left = 0;
   splits.forEach( (s,i) => {
-    processor.applyOperators(sizes[i%sizes.length].operators, split_geometry(axis.value, input, left, left+s));
+    var last = processor.applyOperators(sizes[i%sizes.length].operators, split_geometry(axis.value, input, left, left+s));
+    if ( ( !processor.res.length || processor.res[processor.res.length-1] != last ) && last ) processor.res.push(last);
     left += s;
   });
 
