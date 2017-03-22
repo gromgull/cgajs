@@ -14,6 +14,9 @@ function $(sel) {
 function setup() {
   var canvas = $('canvas');
 
+  var grammar = localStorage.getItem('grammar');
+  if (grammar) $('textarea').value=grammar;
+
   var scene = new THREE.Scene();
   scene.fog = new THREE.FogExp2( 0x112244, 0.06 );
 
@@ -97,6 +100,7 @@ function setup() {
       res = cgaparser.parse(last);
       $('#out').innerHTML = String(res);
 
+      localStorage.setItem('grammar', last);
       update(res);
 
     } catch (e) {
