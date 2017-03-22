@@ -39,7 +39,7 @@ function setup() {
   renderer.shadowMap.type = THREE.PCFSoftShadowMap; // default THREE.PCFShadowMap
 
 
-  var material = new THREE.MeshLambertMaterial( { color: 0x6699ff } );
+  var default_material = new THREE.MeshLambertMaterial( { color: 0x6699ff } );
   var wire_material = new THREE.LineBasicMaterial( { color: 0xffffff, linewidth: 2 } );
   var grass_material = new THREE.MeshPhongMaterial( { color: 0x44bb55 } );
 
@@ -47,7 +47,7 @@ function setup() {
   group.castShadow=true;
   scene.add( group );
 
-  var cube = new THREE.Mesh( new THREE.BoxGeometry( 1, 1, 1 ), material );
+  var cube = new THREE.Mesh( new THREE.BoxGeometry( 1, 1, 1 ), default_material );
   cube.castShadow = true;
   cube.position.y = 0.5;
   group.add(cube);
@@ -139,6 +139,11 @@ function setup() {
     res.forEach(r => {
       r.computeFaceNormals();
       r.computeVertexNormals();
+
+      var material = default_material;
+
+      var attrs = r.attrs;
+      if ( attrs && attrs.material && attrs.material.color ) material = new THREE.MeshLambertMaterial({ color: attrs.material.color });
 
       r = new THREE.BufferGeometry().fromGeometry(r);
 
