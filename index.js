@@ -120,7 +120,8 @@ function setup() {
 
     for( var i = group.children.length - 1; i >= 0; i--) group.remove(group.children[i]);
 
-    var res = cgaprocessor.process(grammar, lot);
+    var proc = new cgaprocessor.Processor(grammar);
+    var res = proc.process(lot);
     console.log(res);
 
     res.forEach(r => {

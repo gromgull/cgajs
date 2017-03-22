@@ -1,7 +1,8 @@
 var cga = require("./cga");
 var THREE = require('three');
 
-function func_extrude(input, amount) {
+
+function func_extrude(processor, input, amount) {
 
   geometry = new THREE.Geometry();
   input.faces.forEach(f => {
@@ -33,22 +34,22 @@ function func_extrude(input, amount) {
   return geometry;
 }
 
-function func_scale(input, x,y,z) {
+function func_scale(processor, input, x,y,z) {
   // this gets relative objects
   return input.clone().scale(x.value, y.value, z.value);
 }
 
-function func_translate(input, x,y,z) {
+function func_translate(processor, input, x,y,z) {
   return input.clone().translate(x,y,z);
 }
 
-function func_rotate(input, x,y,z) {
+function func_rotate(processor, input, x,y,z) {
   return input.clone().rotateX(THREE.Math.degToRad(x))
     .rotateY(THREE.Math.degToRad(y))
     .rotateZ(THREE.Math.degToRad(z));
 }
 
-function func_rand(_, min, max) {
+function func_rand(processor, _, min, max) {
   if (!max) { max = min; min = null; }
   if (!min) min = 0;
   if (!max) max = 1;
@@ -88,7 +89,7 @@ function eval_expr(expr) {
 }
 function register_func(name, min_params, max_params, validator, hasBody, func) {
 
-  FUNCTIONS[name] = (geometry, f) => {
+  FUNCTIONS[name] = (processor, geometry, f) => {
 
     var no_params = f.params ? f.params.length : 0;
 
@@ -104,7 +105,8 @@ function register_func(name, min_params, max_params, validator, hasBody, func) {
 
     if (!params.every(validator)) throw 'Function {name} requires {type} parameters'.format({name:name, type: validator.type});
 
-    return func.apply( null, [ geometry ].concat( params ) );
+
+    return func.apply( null, [ processor, geometry ].concat( params, [f.body] ) );
 
   };
 }
@@ -116,43 +118,52 @@ register_func('t', 3, 3, isNumeric, false, func_translate);
 register_func('extrude', 1, 1, isNumeric, false, func_extrude);
 register_func('rand', 0, 2, isNumeric, false, func_rand);
 
-function process(grammar, lot) {
-  var res = [];
-  var data = {};
-  var rules = {};
+function Processor(grammar) {
+  this.data = {};
+  this.rules = {};
 
-  function applyFunction(geometry, func) {
+  Object.assign(this.data, grammar.attr);
+  grammar.rules.forEach(r => this.rules[r.name] = r);
+}
+
+Processor.prototype.process = function(lot) {
+  this.res = [];
+
+  var last = this.applyRule(this.rules.Lot, lot);
+  if ( ( !this.res.length || this.res[this.res.length-1] != last ) && last ) this.res.push(last);
+
+  return this.res;
+
+};
+
+Processor.prototype.applyFunction = function(geometry, func) {
     if (FUNCTIONS[func.name]) {
-      return FUNCTIONS[func.name](geometry, func);
+      return FUNCTIONS[func.name](this, geometry, func);
     } else {
       if (func.params === null) {
-        return applyRule(rules[func.name], geometry);
+        return this.applyRule(this.rules[func.name], geometry);
       }
     }
     throw 'Unknown function: '+func.name;
+  };
+
+Processor.prototype.applyOperators = function(ops, geometry) {
+  return ops.reduce((g, f) => this.applyFunction(g,f), geometry);
+};
+
+Processor.prototype.applyRule = function(rule, geometry) {
+  if (!rule) {
+    // leaf
+    this.res.push(geometry.clone());
+    return geometry;
+  } else if (rule instanceof cga.Rule) {
+    return this.applyOperators(rule.successors, geometry);
+  } else {
+    throw "Unknown rule type: "+typeof rule;
   }
+};
 
-  function applyRule(rule, geometry) {
-    if (!rule) {
-      // leaf
-      res.push(geometry.clone());
-      return geometry;
-    } else if (rule instanceof cga.Rule) {
-      return rule.successors.reduce(applyFunction, geometry);
-    } else {
-      throw "Unknown rule type: "+typeof rule;
-    }
-  }
-
-  Object.assign(data, grammar.attr);
-  grammar.rules.forEach(r => rules[r.name] = r);
-  var last = applyRule(rules.Lot, lot);
-  if ( !res.length || res[res.length-1] != last ) res.push(last);
-
-  return res;
-
-}
 
 module.exports = {
-  process: process
+  Processor: Processor,
 };
