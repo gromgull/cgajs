@@ -15,7 +15,7 @@ function setup() {
   var canvas = $('canvas');
 
   var scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2( 0x112244, 0.09 );
+  scene.fog = new THREE.FogExp2( 0x112244, 0.06 );
 
   var camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 0.1, 1000 );
   camera.position.z = 5;
@@ -38,7 +38,7 @@ function setup() {
 
   var material = new THREE.MeshLambertMaterial( { color: 0x6699ff } );
   var wire_material = new THREE.LineBasicMaterial( { color: 0xffffff, linewidth: 2 } );
-  var grass_material = new THREE.MeshPhongMaterial( { color: 0x00ff00 } );
+  var grass_material = new THREE.MeshPhongMaterial( { color: 0x44bb55 } );
 
   var group = new THREE.Group();
   group.castShadow=true;
@@ -68,8 +68,8 @@ function setup() {
 
   light.castShadow = true;            // default false
   //Set up shadow properties for the light
-  light.shadow.mapSize.width = 1024;
-  light.shadow.mapSize.height = 1024;
+  // light.shadow.mapSize.width = 1024;
+  // light.shadow.mapSize.height = 1024;
 
 
   scene.add( light );
@@ -118,7 +118,12 @@ function setup() {
     lot.computeFaceNormals();
     lot.computeVertexNormals();
 
-    for( var i = group.children.length - 1; i >= 0; i--) group.remove(group.children[i]);
+    for( var i = group.children.length - 1; i >= 0; i--) {
+      var e = group.children[i];
+      group.remove(e);
+      e.geometry.dispose();
+
+    }
 
     var proc = new cgaprocessor.Processor(grammar);
     var res = proc.process(lot);
@@ -135,6 +140,7 @@ function setup() {
       group.add(mesh);
 
       var wireframe = new THREE.LineSegments( new THREE.EdgesGeometry(r), wire_material );
+      //var wireframe = new THREE.LineSegments( new THREE.WireframeGeometry(r), wire_material );
       group.add( wireframe );
 
     });
