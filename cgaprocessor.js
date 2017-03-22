@@ -1,6 +1,63 @@
 var cga = require("./cga");
 var THREE = require('three');
+var THREEBSP = require('./three-csg');
 
+
+function split_array(a, sep) {
+  var res = [], chunk=[];
+  a.forEach( e => { if (e!=sep) chunk.push(e); else { res.push(chunk); chunk = []; } });
+  if (chunk.length) res.push(chunk);
+  return res;
+}
+
+function split_geometry(axis, geometry, left, right) {
+
+  var leftbox, rightbox, offset;
+
+  geometry.computeBoundingBox();
+
+  _g = new THREEBSP(geometry);
+
+  var bb = geometry.boundingBox.max.sub(geometry.boundingBox.min);
+
+  if (left > bb[axis]) return new THREE.Geometry(); // empty
+
+  if (left) {
+
+    var bbl = bb.clone();
+    bbl.multiplyScalar(1.01);
+    bbl[axis] = left+0.02;
+
+    leftbox = new THREE.BoxGeometry( bbl.x, bbl.y, bbl.z );
+
+    offset = - bb[axis]/2 + left/2 - 0.01;
+    leftbox.translate( axis == 'x' ? offset : 0,
+                       axis == 'y' ? offset : 0,
+                       axis == 'z' ? offset : 0 );
+
+
+    _g = _g.subtract(new THREEBSP(leftbox));
+  }
+
+  if (right) {
+    var bbr = bb.clone();
+    bbr.multiplyScalar(1.01);
+    bbr[axis] = bb[axis]-right+0.02;
+
+    rightbox = new THREE.BoxGeometry( bbr.x, bbr.y, bbr.z );
+    offset = bb[axis]/2 - (bb[axis]-right)/2 + 0.01;
+    rightbox.translate( axis == 'x' ? offset : 0,
+                        axis == 'y' ? offset : 0,
+                        axis == 'z' ? offset : 0 );
+
+
+    _g = _g.subtract(new THREEBSP(rightbox));
+
+  }
+
+  return _g.toGeometry();
+
+}
 
 function func_extrude(processor, input, amount) {
 
@@ -104,6 +161,39 @@ function _compute_splits(sizes, size, repeat) {
   return res;
 }
 
+function func_split(processor, input, axis, body) {
+
+  if ('xyz'.indexOf(axis.value)==-1) throw 'Illegal split-axis: {axis}, can only split by x, y or z'.format({axis:axis});
+
+  input.computeBoundingBox();
+  var size = input.boundingBox.max[axis.value]-input.boundingBox.min[axis.value];
+
+  var parts = split_array(body.parts, '|');
+  total = 0;
+  var sizes = parts.map( p => {
+    if (p.length<3) throw 'Size body part too short: '+p;
+    if (p[1] != ':') throw 'Badly formed size body part, expected "amount : rules" '+p;
+    if (!isValue(p[0])) throw 'Illegal size for split: '+p[0];
+
+    var val = { size: eval_expr(p[0]) };
+    if (isRelative(val)) val.size = size*val.size.value;
+    if (isFloating(val)) { val.size = val.size.value; val.floating = true; }
+
+    total += val.size;
+
+    return { size: val, operators: p.slice(2) };
+  });
+
+  var splits = _compute_splits(sizes, size, body.repeat);
+
+  var left = 0;
+  splits.forEach( (s,i) => {
+    processor.applyOperators(sizes[i].operators, split_geometry(axis, input, left, left+s));
+    left += s;
+  });
+
+}
+
 var FUNCTIONS = { };
 
 
@@ -112,17 +202,37 @@ function isNumeric(n) {
   return !isNaN(parseFloat(n)) && isFinite(n);
 }
 
+function isValue(val) {
+  isValue.type = 'value';
+  return isRelative(val) || isFloating(val) || isNumeric(val);
+}
+
 function isRelative(val) {
   isRelative.type = 'relative';
   return val instanceof cga.Relative;
 }
+
+
+function isFloating(val) {
+  isFloating.type = 'floating';
+  return val instanceof cga.Floating;
+}
+
+
+function isAxis(val) {
+  isAxis.type = 'axis';
+  return val instanceof cga.Axis;
+}
+
 
 function isFunction(val) {
   isFunction.type = 'function';
   return val instanceof cga.Function;
 }
 
+
 function eval_expr(expr) {
+  if (isAxis(expr)) return expr;
   if (isNumeric(expr)) return expr;
   if (isRelative(expr)) {
     expr.value = eval_expr(expr.value);
@@ -164,6 +274,8 @@ register_func('r', 3, 3, isNumeric, false, func_rotate);
 register_func('t', 3, 3, isNumeric, false, func_translate);
 register_func('extrude', 1, 1, isNumeric, false, func_extrude);
 register_func('rand', 0, 2, isNumeric, false, func_rand);
+
+register_func('split', 1, 1, isAxis, true, func_split);
 
 function Processor(grammar) {
   this.data = {};
@@ -213,4 +325,6 @@ Processor.prototype.applyRule = function(rule, geometry) {
 
 module.exports = {
   Processor: Processor,
+  _compute_splits: _compute_splits,
+  split_geometry: split_geometry,
 };
