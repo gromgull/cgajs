@@ -45671,6 +45671,8 @@ function func_comp(processor, input, selector, body) {
 
   });
 
+  parts.side = [].concat( parts.left || [], parts.right || [], parts.back || []);
+
   body.parts.forEach( p => {
     if (p.op != ':' ) throw 'Illegal split operator, must be : was "{op}"'.format(p);
 
