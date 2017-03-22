@@ -109,17 +109,44 @@ function func_extrude(processor, input, amount) {
   return geometry;
 }
 
+function func_taper(processor, input, amount) {
+
+  geometry = new THREE.Geometry();
+
+  var f = input.faces[0];
+  input.computeBoundingBox();
+
+  var c = input.boundingBox.getCenter();
+
+  v = c.addScaledVector(f.normal, amount);
+
+  geometry.vertices.push( input.vertices[f.a] );
+  geometry.vertices.push( input.vertices[f.b] );
+  geometry.vertices.push( input.vertices[f.c] );
+  geometry.vertices.push( v );
+
+  // bottom
+  geometry.faces.push( new THREE.Face3(0, 2, 1) );
+
+  geometry.faces.push( new THREE.Face3(0, 1, 3) );
+  geometry.faces.push( new THREE.Face3(1, 2, 3) );
+  geometry.faces.push( new THREE.Face3(2, 0, 3) );
+
+  return geometry;
+}
+
+
 function func_scale(processor, input, x,y,z) {
   // this gets relative objects
-  return input.clone().scale(x.value, y.value, z.value);
+  return input.scale(x.value, y.value, z.value);
 }
 
 function func_translate(processor, input, x,y,z) {
-  return input.clone().translate(x,y,z);
+  return input.translate(x,y,z);
 }
 
 function func_rotate(processor, input, x,y,z) {
-  return input.clone().rotateX(THREE.Math.degToRad(x))
+  return input.rotateX(THREE.Math.degToRad(x))
     .rotateY(THREE.Math.degToRad(y))
     .rotateZ(THREE.Math.degToRad(z));
 }
@@ -313,6 +340,7 @@ register_func('s', 3, 3, isRelative, false, func_scale);
 register_func('r', 3, 3, isNumeric, false, func_rotate);
 register_func('t', 3, 3, isNumeric, false, func_translate);
 register_func('extrude', 1, 1, isNumeric, false, func_extrude);
+register_func('taper', 1, 1, isNumeric, false, func_taper);
 register_func('rand', 0, 2, isNumeric, false, func_rand);
 register_func('set', 2, 2, [ isAttrRef, null ], false, func_set);
 
