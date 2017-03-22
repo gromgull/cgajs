@@ -32,4 +32,6 @@ t('Lot --> Cake\nCake --> s(3.4)');
 t('Lot --> s(3.4) Cake\nCake --> s(3.4)');
 t('Lot --> split(y) { 1: Cake }\nCake --> s(3.4)');
 
-t('Lot --> set(material.color, "red")')
+t('Lot --> comp(f) { front: Cake | back : Cake}');
+
+t('Lot --> set(material.color, "red")');

@@ -29,6 +29,11 @@ Axis.prototype.toString = function() {
   return 'Axis({value})'.format(this);
 };
 
+function CompSelector(value) { this.value = value; }
+CompSelector.prototype.toString = function() {
+  return 'CompSelector({value})'.format(this);
+};
+
 
 function Floating(value) { this.value = value; }
 Floating.prototype.toString = function() {
@@ -67,4 +72,5 @@ module.exports = {
   OpBlock: OpBlock,
   Axis: Axis,
   AttrRef: AttrRef,
+  CompSelector: CompSelector,
 };

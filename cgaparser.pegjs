@@ -25,6 +25,8 @@ literal = float / int
 
 axis = value:('x'/'y'/'z'/'xy'/'xz'/'yz'/'xyz') { return new cga.Axis(value); }
 
+comp_selector = value:('f'/'e'/'v') { return new cga.CompSelector(value); }
+
 ident = $([a-zA-Z][a-zA-Z0-9]*)
 
 comment
@@ -42,7 +44,7 @@ block = "{" body:( head:block_op tail:(pipe v:block_op { return v; } )* { return
 
 block_op = _ head:expr _ op:(colon/equals) _ operations:expr* _ { return new cga.OpBlock(head, op, operations); }
 
-func_expr = axis / expr
+func_expr = axis / comp_selector / expr
 body_expr = _ p:(colon / pipe / expr) _ { return p; }
 
 expr = attrref / func / float / int / string / relative
