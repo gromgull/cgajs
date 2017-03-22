@@ -14,8 +14,19 @@ function $(sel) {
 function setup() {
   var canvas = $('canvas');
 
-  var grammar = localStorage.getItem('grammar');
-  if (grammar) $('textarea').value=grammar;
+  var lot = 'triangle';
+  var grammar;
+  var last;
+
+  $('.lot-selector').addEventListener('change', e => {
+    lot=e.target.value;
+    update();
+  });
+
+  $('#updateBtn').addEventListener('click', update);
+
+  var grammarText = localStorage.getItem('grammar');
+  if (grammarText) $('textarea').value = grammarText;
 
   var scene = new THREE.Scene();
   scene.fog = new THREE.FogExp2( 0x112244, 0.06 );
@@ -47,22 +58,12 @@ function setup() {
   group.castShadow=true;
   scene.add( group );
 
-  var cube = new THREE.Mesh( new THREE.BoxGeometry( 1, 1, 1 ), default_material );
-  cube.castShadow = true;
-  cube.position.y = 0.5;
-  group.add(cube);
-
-  var wireframe = new THREE.LineSegments( new THREE.EdgesGeometry(cube.geometry), wire_material );
-  wireframe.position.y = 0.5;
-  group.add( wireframe );
-
-
-  var plane = new THREE.Mesh(new THREE.PlaneGeometry( 150, 150 ), grass_material);
-  plane.receiveShadow = true;
-  plane.rotateX(-Math.PI/2);
-  plane.position.y = -0.01;
-  plane.scale.set(100,100,100);
-  scene.add(plane);
+  var ground = new THREE.Mesh(new THREE.PlaneGeometry( 150, 150 ), grass_material);
+  ground.receiveShadow = true;
+  ground.rotateX(-Math.PI/2);
+  ground.position.y = -0.01;
+  ground.scale.set(100,100,100);
+  scene.add(ground);
 
 
   //Create a DirectionalLight and turn on shadows for the light
@@ -90,40 +91,56 @@ function setup() {
   }
   render();
 
-  var last;
-  $('textarea').addEventListener('keyup', () => {
+
+  $('textarea').addEventListener('keyup', parse);
+
+  function parse() {
     if ($('textarea').value == last) return;
     $('#error').innerHTML = '';
-    var res;
     try {
       last = $('textarea').value;
-      res = cgaparser.parse(last);
-      $('#out').innerHTML = String(res);
+      grammar = cgaparser.parse(last);
+      $('#out').innerHTML = String(grammar);
 
       localStorage.setItem('grammar', last);
-      update(res);
+      update();
 
     } catch (e) {
       console.log(e);
       $('#error').innerHTML=e;
       return ;
     }
+  }
 
+  function update() {
+    var lotGeom = new THREE.Geometry();
 
-  });
+    if ( lot == 'triangle') {
+      lotGeom.vertices.push( new THREE.Vector3( -1, 0, 0 ) );
+      lotGeom.vertices.push( new THREE.Vector3(  1, 0, 0 ) );
+      lotGeom.vertices.push( new THREE.Vector3(  0, 0, 2*Math.sqrt(3)/2 ) );
 
+      lotGeom.faces.push( new THREE.Face3( 0, 2, 1 ) );
+    } else if ( lot == 'square' ) {
+      lotGeom.vertices.push( new THREE.Vector3( -1, 0, -1 ) );
+      lotGeom.vertices.push( new THREE.Vector3(  1, 0, -1 ) );
+      lotGeom.vertices.push( new THREE.Vector3(  1, 0, 1 ) );
+      lotGeom.vertices.push( new THREE.Vector3(  -1, 0, 1 ) );
 
-  function update(grammar) {
-    var lot = new THREE.Geometry();
+      lotGeom.faces.push( new THREE.Face3( 0, 2, 1 ) );
+      lotGeom.faces.push( new THREE.Face3( 2, 0, 3 ) );
+    } else if (lot == 'rectangle') {
+      lotGeom.vertices.push( new THREE.Vector3( -1.5, 0, -1 ) );
+      lotGeom.vertices.push( new THREE.Vector3(  1.5, 0, -1 ) );
+      lotGeom.vertices.push( new THREE.Vector3(  1.5, 0, 1 ) );
+      lotGeom.vertices.push( new THREE.Vector3(  -1.5, 0, 1 ) );
 
-    lot.vertices.push( new THREE.Vector3( -1, 0, -1 ) );
-    lot.vertices.push( new THREE.Vector3(  1, 0, -1 ) );
-    lot.vertices.push( new THREE.Vector3(  1, 0, 1 ) );
+      lotGeom.faces.push( new THREE.Face3( 0, 2, 1 ) );
+      lotGeom.faces.push( new THREE.Face3( 2, 0, 3 ) );
 
-    lot.faces.push( new THREE.Face3( 0, 2, 1 ) );
-
-    lot.computeFaceNormals();
-    lot.computeVertexNormals();
+    }
+    lotGeom.computeFaceNormals();
+    lotGeom.computeVertexNormals();
 
     for( var i = group.children.length - 1; i >= 0; i--) {
       var e = group.children[i];
@@ -133,7 +150,7 @@ function setup() {
     }
 
     var proc = new cgaprocessor.Processor(grammar);
-    var res = proc.process(lot);
+    var res = proc.process(lotGeom);
     console.log(res);
 
     res.forEach(r => {
@@ -145,9 +162,7 @@ function setup() {
       var attrs = r.attrs;
       if ( attrs && attrs.material && attrs.material.color ) material = new THREE.MeshLambertMaterial({ color: attrs.material.color });
 
-      r = new THREE.BufferGeometry().fromGeometry(r);
-
-      var mesh = new THREE.Mesh(r, material);
+      var mesh = new THREE.Mesh(new THREE.BufferGeometry().fromGeometry(r), material);
       mesh.castShadow = true;
       group.add(mesh);
 
@@ -159,15 +174,7 @@ function setup() {
 
   }
 
-
-  // var triangles = THREE.ShapeUtils.triangulateShape ( geometry.vertices, [] );
-
-  // for( var i = 0; i < triangles.length; i++ ){
-
-  //   geometry.faces.push( new THREE.Face3( triangles[i][0], triangles[i][1], triangles[i][2] ));
-
-  // }
-
+  parse();
 }
 
 setup();
