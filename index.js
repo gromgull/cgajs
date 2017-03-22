@@ -1,4 +1,4 @@
-var THREE = require("three/build/three.min");
+var THREE = require("three");
 var OrbitControls = require('./orbitcontrols');
 var cgaparser = require("./cgaparser");
 var cgaprocessor = require("./cgaprocessor");

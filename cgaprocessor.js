@@ -1,5 +1,5 @@
 var cga = require("./cga");
-var THREE = require("three/build/three.min");
+var THREE = require('three');
 
 function func_extrude(input, amount) {
 
