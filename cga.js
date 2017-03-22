@@ -51,6 +51,12 @@ OpBlock.prototype.toString = function() {
   return 'OpBlock({head}, {op}, {operations})'.format(this);
 };
 
+function AttrRef(obj, field) { this.obj = obj; this.field = field; }
+AttrRef.prototype.toString = function() {
+  return 'AttrRef({obj}, {field})'.format(this);
+};
+
+
 module.exports = {
   CGA: CGA,
   Rule: Rule,
@@ -60,4 +66,5 @@ module.exports = {
   Body: Body,
   OpBlock: OpBlock,
   Axis: Axis,
+  AttrRef: AttrRef,
 };

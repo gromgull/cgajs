@@ -45,7 +45,11 @@ block_op = _ head:expr _ op:(colon/equals) _ operations:expr* _ { return new cga
 func_expr = axis / expr
 body_expr = _ p:(colon / pipe / expr) _ { return p; }
 
-expr = func / float / int / relative
+expr = attrref / func / float / int / string / relative
+
+attrref = obj:ident "." field:ident { return new cga.AttrRef(obj, field); }
+
+string = "\"" t:([^"]*{ return text(); })  "\"" { return t; }
 
 attr = "attr" ws variable:ident _ "=" _ value:literal _ { var res = {}; res[variable] = value; return res; }
 

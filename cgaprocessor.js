@@ -213,6 +213,13 @@ function func_split(processor, input, axis, body) {
 
 }
 
+function func_set(processor, input, attr, val) {
+  if (!input.attrs) input.attrs = {};
+  if (!input.attrs[attr.obj]) input.attrs[attr.obj] = {};
+  input.attrs[attr.obj][attr.field] = eval_expr(processor, val);
+  return input;
+}
+
 var FUNCTIONS = { };
 
 
@@ -249,8 +256,15 @@ function isFunction(val) {
   return val instanceof cga.Function;
 }
 
+function isAttrRef(val) {
+  isAttrRef.type = 'attrref';
+  return val instanceof cga.AttrRef;
+}
+
 
 function eval_expr(processor, expr) {
+  if ((typeof expr) == 'string') return expr;
+  if (isAttrRef(expr)) return expr; // hmm
   if (isAxis(expr)) return expr;
   if (isNumeric(expr)) return expr;
   if (isRelative(expr)) {
@@ -279,7 +293,14 @@ function register_func(name, min_params, max_params, validator, hasBody, func) {
 
     params = f.params.map(p => eval_expr(processor, p));
 
-    if (!params.every(validator)) throw 'Function {name} requires {type} parameters'.format({name:name, type: validator.type});
+    if (validator instanceof Array)
+      params.forEach( (p,i) => {
+        if (!(validator[i] || (x=>true))(p) )
+          throw 'Function {name} requires {type} parameters, param {i} was {t}'.format({name:name, type: validator.type, i: i, t: typeof p});
+      });
+    else
+      if (!params.every( validator ))
+        throw 'Function {name} requires {type} parameters'.format({name:name, type: validator.type});
 
 
     return func.apply( null, [ processor, geometry ].concat( params, [f.body] ) );
@@ -293,6 +314,7 @@ register_func('r', 3, 3, isNumeric, false, func_rotate);
 register_func('t', 3, 3, isNumeric, false, func_translate);
 register_func('extrude', 1, 1, isNumeric, false, func_extrude);
 register_func('rand', 0, 2, isNumeric, false, func_rand);
+register_func('set', 2, 2, [ isAttrRef, null ], false, func_set);
 
 register_func('split', 1, 1, isAxis, true, func_split);
 
