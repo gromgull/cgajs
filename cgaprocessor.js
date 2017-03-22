@@ -108,9 +108,11 @@ function func_extrude(processor, input, amount) {
 function func_taper(processor, input, amount) {
 
   geometry = new THREE.Geometry();
+  geometry.attrs = input.attrs;
 
   var f = input.faces[0];
   input.computeBoundingBox();
+  input.computeFaceNormals();
 
   var c = input.boundingBox.getCenter();
 
@@ -235,6 +237,57 @@ function func_split(processor, input, axis, body) {
 
 }
 
+function func_comp(processor, input, selector, body) {
+
+  if (selector.value != 'f') throw 'Illegal comp-selector: {axis}, can only comp by fz'.format({axis:axis});
+
+  input.computeFaceNormals();
+
+  var directions = {
+    front: new THREE.Vector3(0,0,1),
+    back: new THREE.Vector3(0,0,-1),
+    left: new THREE.Vector3(-1,0,0),
+    right: new THREE.Vector3(1,0,0),
+    top: new THREE.Vector3(0,1,0),
+    bottom: new THREE.Vector3(0,-1,0),
+  };
+
+  var faces = {};
+  var parts = {};
+
+  input.faces.forEach(f => {
+    var angels = {};
+    var dirs = Object.keys(directions);
+    dirs.forEach(d => angels[d] = f.normal.angleTo(directions[d]));
+    dirs.sort( (a,b) => angels[a]-angels[b] );
+
+    if (!parts[dirs[0]]) parts[dirs[0]] = [];
+    parts[dirs[0]].push(f);
+
+  });
+
+  body.parts.forEach( p => {
+    if (p.op != ':' ) throw 'Illegal split operator, must be : was "{op}"'.format(p);
+
+    if (parts[p.head.name])
+      parts[p.head.name].forEach( f => {
+        var g = new THREE.Geometry();
+        g.vertices.push(input.vertices[f.a]);
+        g.vertices.push(input.vertices[f.b]);
+        g.vertices.push(input.vertices[f.c]);
+        g.faces.push(new THREE.Face3(0,1,2));
+
+        var last = processor.applyOperations(p.operations, g);
+        if ( ( !processor.res.length || processor.res[processor.res.length-1] != last ) && last ) processor.res.push(last);
+      });
+
+
+  });
+
+
+}
+
+
 function func_set(processor, input, attr, val) {
   if (!input.attrs) input.attrs = {};
   if (!input.attrs[attr.obj]) input.attrs[attr.obj] = {};
@@ -283,13 +336,20 @@ function isAttrRef(val) {
   return val instanceof cga.AttrRef;
 }
 
+function isCompSelector(val) {
+  isCompSelector.type = 'compselector';
+  return val instanceof cga.CompSelector;
+}
+
 
 function eval_expr(processor, expr) {
   if ((typeof expr) == 'string') return expr;
   if (isAttrRef(expr)) return expr; // hmm
+  if (isCompSelector(expr)) return expr;
   if (isAxis(expr)) return expr;
   if (isNumeric(expr)) return expr;
   if (isRelative(expr)) {
+    expr = new cga.Relative(expr.value); // clone
     expr.value = eval_expr(processor, expr.value);
     return expr;
   }
@@ -340,6 +400,7 @@ register_func('rand', 0, 2, isNumeric, false, func_rand);
 register_func('set', 2, 2, [ isAttrRef, null ], false, func_set);
 
 register_func('split', 1, 1, isAxis, true, func_split);
+register_func('comp', 1, 1, isCompSelector, true, func_comp);
 
 function Processor(grammar) {
   this.data = {};
