@@ -87,6 +87,10 @@ function func_extrude(processor, input, amount) {
     geometry.vertices.push( extrude(input.vertices[f.b] ));
     geometry.vertices.push( extrude(input.vertices[f.c] ));
 
+    // bottom
+    geometry.faces.push( new THREE.Face3(l+0, l+2, l+1) );
+
+    // top
     geometry.faces.push( new THREE.Face3(l+3, l+4, l+5) );
 
     geometry.faces.push( new THREE.Face3(l+0, l+4, l+3) );
