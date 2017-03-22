@@ -26,3 +26,8 @@ t('Lot --> split(y) { 4 : Floor }\n');
 t('Lot --> split(y) { 4 : Floor }*\n');
 
 t('Lot --> split(y) { 4 : Floor | 3: Floor }*\n');
+
+
+t('Lot --> Cake\nCake --> s(3.4)');
+t('Lot --> s(3.4) Cake\nCake --> s(3.4)');
+t('Lot --> split(y) { 1: Cake }\nCake --> s(3.4)');

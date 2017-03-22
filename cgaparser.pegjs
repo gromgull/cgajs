@@ -18,6 +18,7 @@ comma = _ "," _
 
 colon = ":"
 pipe = "|"
+arrow = "-->"
 
 literal = float / int
 
@@ -44,4 +45,4 @@ expr = func / float / int / relative
 attr = "attr" ws variable:ident _ "=" _ value:literal _ { var res = {}; res[variable] = value; return res; }
 
 // ( "(" ident ( "," ident ) * ")" ) ?
-rule = name:ident  _ "-->" successors:((_ e: expr { return e } ) *) { return new cga.Rule( name, successors ); }
+rule = name:ident  _ arrow successors:((_ e:expr _ !arrow { return e } ) *) { return new cga.Rule( name, successors ); }
