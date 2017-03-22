@@ -45064,7 +45064,7 @@ function split_geometry(axis, geometry, left, right) {
 
   _g = new THREEBSP(geometry);
 
-  var bb = geometry.boundingBox.max.sub(geometry.boundingBox.min);
+  var bb = geometry.boundingBox.max.clone().sub(geometry.boundingBox.min);
 
   if (left > bb[axis]) return new THREE.Geometry(); // empty
 
@@ -45076,10 +45076,9 @@ function split_geometry(axis, geometry, left, right) {
 
     leftbox = new THREE.BoxGeometry( bbl.x, bbl.y, bbl.z );
 
-    offset = - bb[axis]/2 + left/2 - 0.01;
-    leftbox.translate( axis == 'x' ? offset : 0,
-                       axis == 'y' ? offset : 0,
-                       axis == 'z' ? offset : 0 );
+    offset = geometry.boundingBox.getCenter();
+    offset[axis] += - bb[axis]/2 + left/2 - 0.01;
+    leftbox.translate( offset.x, offset.y, offset.z );
 
 
     _g = _g.subtract(new THREEBSP(leftbox));
@@ -45091,17 +45090,30 @@ function split_geometry(axis, geometry, left, right) {
     bbr[axis] = bb[axis]-right+0.02;
 
     rightbox = new THREE.BoxGeometry( bbr.x, bbr.y, bbr.z );
-    offset = bb[axis]/2 - (bb[axis]-right)/2 + 0.01;
-    rightbox.translate( axis == 'x' ? offset : 0,
-                        axis == 'y' ? offset : 0,
-                        axis == 'z' ? offset : 0 );
-
+    offset = geometry.boundingBox.getCenter();
+    offset[axis] += bb[axis]/2 - (bb[axis]-right)/2 + 0.01;
+    rightbox.translate( offset.x, offset.y, offset.z );
 
     _g = _g.subtract(new THREEBSP(rightbox));
 
   }
 
-  return _g.toGeometry();
+  var g = _g.toGeometry();
+  g.mergeVertices();
+  g.computeBoundingBox();
+
+  console.log('Split {min}, {max} at {left}-{right} and got {newmin}, {newmax}'.format({min: JSON.stringify(geometry.boundingBox.min),
+                                                                                        max: JSON.stringify(geometry.boundingBox.max),
+                                                                                        left: left,
+                                                                                        right: right,
+                                                                                        newmin: JSON.stringify(g.boundingBox.min),
+                                                                                        newmax: JSON.stringify(g.boundingBox.max) }));
+
+  var used = Array(g.vertices.length);
+  g.faces.forEach(f => { used[f.a] = true ; used[f.b] = true ; used[f.c] = true; });
+  console.log(used);
+
+  return g;
 
 }
 
@@ -45134,6 +45146,8 @@ function func_extrude(processor, input, amount) {
 
 
   });
+  console.log("From {v}/{f} vertices/faces, extruded {nv}/{nf}".format({v: input.vertices.length, f: input.faces.length,
+                                                                        nv: geometry.vertices.length, nf: geometry.vertices.length }));
   return geometry;
 }
 
@@ -45234,7 +45248,7 @@ function func_split(processor, input, axis, body) {
 
   var left = 0;
   splits.forEach( (s,i) => {
-    processor.applyOperators(sizes[i].operators, split_geometry(axis, input, left, left+s));
+    processor.applyOperators(sizes[i].operators, split_geometry(axis.value, input, left, left+s));
     left += s;
   });
 
@@ -47000,7 +47014,7 @@ function setup() {
   var canvas = $('canvas');
 
   var scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2( 0x112244, 0.09 );
+  scene.fog = new THREE.FogExp2( 0x112244, 0.06 );
 
   var camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 0.1, 1000 );
   camera.position.z = 5;
@@ -47022,40 +47036,20 @@ function setup() {
 
 
   var material = new THREE.MeshLambertMaterial( { color: 0x6699ff } );
-
   var wire_material = new THREE.LineBasicMaterial( { color: 0xffffff, linewidth: 2 } );
-  var grass_material = new THREE.MeshPhongMaterial( { color: 0x00ff00 } );
+  var grass_material = new THREE.MeshPhongMaterial( { color: 0x44bb55 } );
 
   var group = new THREE.Group();
   group.castShadow=true;
   scene.add( group );
 
-  var box = new THREE.BoxGeometry( 2, 3, 2 );
-  var offset = 1.5;
-
-  // boxes = cgaprocessor.split_geometry('y', box, 1.9, 2);
-  // console.log(boxes);
-
-  // var material1 = new THREE.MeshLambertMaterial( { color: 0xff0000 } );
-  // var material2 = new THREE.MeshLambertMaterial( { color: 0x00ff00 } );
-  // var b1 = new THREE.Mesh( boxes[0], material1 );
-  // b1.castShadow = true;
-  // b1.position.y = offset;
-  // //group.add(b1);
-
-  // var b2 = new THREE.Mesh( boxes[1], material2 );
-  // b2.castShadow = true;
-  // b2.position.y = offset;
-  // //group.add(b2);
-
-
-  var cube = new THREE.Mesh( box, material );
+  var cube = new THREE.Mesh( new THREE.BoxGeometry( 1, 1, 1 ), material );
   cube.castShadow = true;
-  cube.position.y = offset;
+  cube.position.y = 0.5;
   group.add(cube);
 
   var wireframe = new THREE.LineSegments( new THREE.EdgesGeometry(cube.geometry), wire_material );
-  wireframe.position.y = offset;
+  wireframe.position.y = 0.5;
   group.add( wireframe );
 
 
@@ -47073,8 +47067,8 @@ function setup() {
 
   light.castShadow = true;            // default false
   //Set up shadow properties for the light
-  light.shadow.mapSize.width = 1024;
-  light.shadow.mapSize.height = 1024;
+  // light.shadow.mapSize.width = 1024;
+  // light.shadow.mapSize.height = 1024;
 
 
   scene.add( light );
@@ -47123,7 +47117,12 @@ function setup() {
     lot.computeFaceNormals();
     lot.computeVertexNormals();
 
-    for( var i = group.children.length - 1; i >= 0; i--) group.remove(group.children[i]);
+    for( var i = group.children.length - 1; i >= 0; i--) {
+      var e = group.children[i];
+      group.remove(e);
+      e.geometry.dispose();
+
+    }
 
     var proc = new cgaprocessor.Processor(grammar);
     var res = proc.process(lot);
@@ -47140,6 +47139,7 @@ function setup() {
       group.add(mesh);
 
       var wireframe = new THREE.LineSegments( new THREE.EdgesGeometry(r), wire_material );
+      //var wireframe = new THREE.LineSegments( new THREE.WireframeGeometry(r), wire_material );
       group.add( wireframe );
 
     });

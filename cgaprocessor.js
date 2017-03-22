@@ -18,7 +18,7 @@ function split_geometry(axis, geometry, left, right) {
 
   _g = new THREEBSP(geometry);
 
-  var bb = geometry.boundingBox.max.sub(geometry.boundingBox.min);
+  var bb = geometry.boundingBox.max.clone().sub(geometry.boundingBox.min);
 
   if (left > bb[axis]) return new THREE.Geometry(); // empty
 
@@ -30,10 +30,9 @@ function split_geometry(axis, geometry, left, right) {
 
     leftbox = new THREE.BoxGeometry( bbl.x, bbl.y, bbl.z );
 
-    offset = - bb[axis]/2 + left/2 - 0.01;
-    leftbox.translate( axis == 'x' ? offset : 0,
-                       axis == 'y' ? offset : 0,
-                       axis == 'z' ? offset : 0 );
+    offset = geometry.boundingBox.getCenter();
+    offset[axis] += - bb[axis]/2 + left/2 - 0.01;
+    leftbox.translate( offset.x, offset.y, offset.z );
 
 
     _g = _g.subtract(new THREEBSP(leftbox));
@@ -45,17 +44,30 @@ function split_geometry(axis, geometry, left, right) {
     bbr[axis] = bb[axis]-right+0.02;
 
     rightbox = new THREE.BoxGeometry( bbr.x, bbr.y, bbr.z );
-    offset = bb[axis]/2 - (bb[axis]-right)/2 + 0.01;
-    rightbox.translate( axis == 'x' ? offset : 0,
-                        axis == 'y' ? offset : 0,
-                        axis == 'z' ? offset : 0 );
-
+    offset = geometry.boundingBox.getCenter();
+    offset[axis] += bb[axis]/2 - (bb[axis]-right)/2 + 0.01;
+    rightbox.translate( offset.x, offset.y, offset.z );
 
     _g = _g.subtract(new THREEBSP(rightbox));
 
   }
 
-  return _g.toGeometry();
+  var g = _g.toGeometry();
+  g.mergeVertices();
+  g.computeBoundingBox();
+
+  console.log('Split {min}, {max} at {left}-{right} and got {newmin}, {newmax}'.format({min: JSON.stringify(geometry.boundingBox.min),
+                                                                                        max: JSON.stringify(geometry.boundingBox.max),
+                                                                                        left: left,
+                                                                                        right: right,
+                                                                                        newmin: JSON.stringify(g.boundingBox.min),
+                                                                                        newmax: JSON.stringify(g.boundingBox.max) }));
+
+  var used = Array(g.vertices.length);
+  g.faces.forEach(f => { used[f.a] = true ; used[f.b] = true ; used[f.c] = true; });
+  console.log(used);
+
+  return g;
 
 }
 
@@ -88,6 +100,8 @@ function func_extrude(processor, input, amount) {
 
 
   });
+  console.log("From {v}/{f} vertices/faces, extruded {nv}/{nf}".format({v: input.vertices.length, f: input.faces.length,
+                                                                        nv: geometry.vertices.length, nf: geometry.vertices.length }));
   return geometry;
 }
 
@@ -188,7 +202,7 @@ function func_split(processor, input, axis, body) {
 
   var left = 0;
   splits.forEach( (s,i) => {
-    processor.applyOperators(sizes[i].operators, split_geometry(axis, input, left, left+s));
+    processor.applyOperators(sizes[i].operators, split_geometry(axis.value, input, left, left+s));
     left += s;
   });
 
