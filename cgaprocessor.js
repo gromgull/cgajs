@@ -56,6 +56,53 @@ function func_rand(processor, _, min, max) {
   return min + Math.random()*(max-min);
 }
 
+function _compute_splits(sizes, size, repeat) {
+  var res = [], total_floats = 0, floats = [], i=0, current=0, done = false;
+
+  while (!done) {
+    console.log(current);
+
+    var cur = sizes[i];
+
+    if (current + cur.size > size) {
+
+      if ( cur.floating )
+        repeat = false;
+      else if (current + cur.size - total_floats < size) {
+        total_floats -= cur.size;
+        if (total_floats<0) break;
+        repeat = false;
+      } else {
+        break;
+      }
+    }
+
+    if (cur.floating) {
+      total_floats += cur.size;
+      floats.push(res.length);
+    }
+
+    current += cur.size;
+    res.push(cur.size.size);
+
+    i++;
+    if (i==sizes.length) {
+      if (!repeat) done = true;
+      i = 0;
+    }
+  }
+
+  if (floats.length) { // resize floats
+
+    // recompute total
+    total_floats = floats.reduce((a,i) => a+res[i], 0);
+    var diff = (current - size)/total_floats;
+
+    floats.forEach( i => res[i]-=res[i]*diff );
+  }
+
+  return res;
+}
 
 var FUNCTIONS = { };
 
