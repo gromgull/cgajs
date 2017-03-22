@@ -63,10 +63,6 @@ function split_geometry(axis, geometry, left, right) {
                                                                                         newmin: JSON.stringify(g.boundingBox.min),
                                                                                         newmax: JSON.stringify(g.boundingBox.max) }));
 
-  var used = Array(g.vertices.length);
-  g.faces.forEach(f => { used[f.a] = true ; used[f.b] = true ; used[f.c] = true; });
-  console.log(used);
-
   return g;
 
 }
@@ -162,7 +158,6 @@ function _compute_splits(sizes, size, repeat) {
   var res = [], total_floats = 0, floats = [], i=0, current=0, done = false;
 
   while (!done) {
-    console.log(current);
 
     var cur = sizes[i];
 
