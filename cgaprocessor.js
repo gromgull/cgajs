@@ -193,7 +193,7 @@ function func_split(processor, input, axis, body) {
     if (p[1] != ':') throw 'Badly formed size body part, expected "amount : rules" '+p;
     if (!isValue(p[0])) throw 'Illegal size for split: '+p[0];
 
-    var val = eval_expr(p[0]);
+    var val = eval_expr(processor, p[0]);
     var floating = false;
     if (isRelative(val)) val = size*val.value;
     if (isFloating(val)) { val = val.value; floating = true; }
@@ -250,16 +250,16 @@ function isFunction(val) {
 }
 
 
-function eval_expr(expr) {
+function eval_expr(processor, expr) {
   if (isAxis(expr)) return expr;
   if (isNumeric(expr)) return expr;
   if (isRelative(expr)) {
-    expr.value = eval_expr(expr.value);
+    expr.value = eval_expr(processor, expr.value);
     return expr;
   }
   if (isFunction(expr)) {
     if (!FUNCTIONS[expr.name]) throw "Undefined function '{name}'".format({name:expr.name});
-    return FUNCTIONS[expr.name](null, expr); // object in scope?
+    return FUNCTIONS[expr.name](processor, null, expr); // object in scope?
   }
   throw "Cannot evaluation expression: "+expr;
 }
@@ -277,7 +277,7 @@ function register_func(name, min_params, max_params, validator, hasBody, func) {
     if ( hasBody && !f.body ) throw 'Function {name} needs a body'.format({name:name});
     if ( !hasBody && f.body ) throw 'Function {name} does not take a body'.format({name:name});
 
-    params = f.params.map(eval_expr);
+    params = f.params.map(p => eval_expr(processor, p));
 
     if (!params.every(validator)) throw 'Function {name} requires {type} parameters'.format({name:name, type: validator.type});
 
