@@ -87,11 +87,14 @@ function setup() {
   }
   render();
 
+  var last;
   $('textarea').addEventListener('keyup', () => {
+    if ($('textarea').value == last) return;
     $('#error').innerHTML = '';
     var res;
     try {
-      res = cgaparser.parse($('textarea').value);
+      last = $('textarea').value;
+      res = cgaparser.parse(last);
       $('#out').innerHTML = String(res);
 
       update(res);
