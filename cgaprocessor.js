@@ -451,12 +451,12 @@ Processor.prototype.applyOperations = function(ops, geometry) {
 };
 
 Processor.prototype.applyRule = function(rule, geometry) {
-  if (rule.name == 'NIL') return; // TODO: don't hardcode?
   if (!rule) {
     // leaf
     this.res.push(geometry.clone());
     return geometry;
   } else if (rule instanceof cga.Rule) {
+    if (rule.name == 'NIL') return; // TODO: don't hardcode?
     return this.applyOperations(rule.successors, geometry);
   } else {
     throw "Unknown rule type: "+typeof rule;
