@@ -10,6 +10,27 @@ function $(sel) {
   return document.querySelector(sel);
 }
 
+$.create = function(n, v, c) {
+  n = document.createElement(n);
+  for (var p in v)
+    n.setAttribute(p, v[p]);
+  if (c) n.innerHTML = c;
+  return n;
+};
+
+
+var examples = {
+  basic: 'Lot --> extrude(2) split(y) { 0.2 : r(0, rand(0,30), 0) Floor }*',
+  house: "Lot --> extrude(1) comp(f) { front: Front | side: Side | top: Roof | back : Back }\n\
+\n\
+Roof --> color(\"red\") taper(1) \n\
+\n\
+Front --> color(\"white\") split(x) { '0.3: Wall | '0.4 : DoorWall | '0.3: Wall }\n\
+\n\
+DoorWall --> split(y) { '0.8: Door | '0.2 : Wall }\n\
+\n\
+Door --> color(\"white\")"
+};
 
 function setup() {
   var canvas = $('canvas');
@@ -24,6 +45,13 @@ function setup() {
   });
 
   $('#updateBtn').addEventListener('click', update);
+
+  Object.keys(examples).forEach(e => $('.example-selector').appendChild( $.create('option', null, e) ) );
+  $('.example-selector').addEventListener('change', e => {
+    if (!e.target.value) return;
+    $('textarea').value = examples[e.target.value];
+    parse();
+  });
 
   var grammarText = localStorage.getItem('grammar');
   if (grammarText) $('textarea').value = grammarText;
