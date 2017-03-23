@@ -14,6 +14,8 @@ function split_geometry(axis, geometry, left, right) {
 
   var leftbox, rightbox, offset;
 
+  if (!geometry.faces.length) return geometry;
+
   geometry.computeBoundingBox();
 
   _g = new THREEBSP(geometry);
@@ -230,7 +232,9 @@ function func_split(processor, input, axis, body) {
 
   var left = 0;
   splits.forEach( (s,i) => {
-    var last = processor.applyOperations(sizes[i%sizes.length].operations, split_geometry(axis.value, input, left, left+s));
+    var geom = split_geometry(axis.value, input, left, left+s);
+    geom.attr = input.attr;
+    var last = processor.applyOperations(sizes[i%sizes.length].operations, geom);
     // TODO: this should go somewhere central
     if ( ( !processor.res.length || processor.res[processor.res.length-1] != last ) && last ) processor.res.push(last);
     left += s;
@@ -281,6 +285,7 @@ function func_comp(processor, input, selector, body) {
         g.faces.push(new THREE.Face3(0,1,2));
 
         var last = processor.applyOperations(p.operations, g);
+        // TODO: this should go somewhere central
         if ( ( !processor.res.length || processor.res[processor.res.length-1] != last ) && last ) processor.res.push(last);
       });
 
