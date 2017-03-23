@@ -112,6 +112,14 @@ function setup() {
   // scene.add( helper );
   scene.add(new THREE.AmbientLight( 0x404040 )); // soft white light
 
+  window.addEventListener( 'resize', onWindowResize, false );
+
+  function onWindowResize() {
+	camera.aspect = canvas.parentElement.clientWidth / canvas.parentElement.clientHeight;
+	camera.updateProjectionMatrix();
+	renderer.setSize( canvas.parentElement.clientWidth-30, canvas.parentElement.clientHeight );
+  }
+
   function render() {
     controls.update();
 	requestAnimationFrame( render );
