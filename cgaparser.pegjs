@@ -12,7 +12,7 @@ float = "-"?[0-9]+ "." [0-9]+ { return parseFloat(text()) }
 
 relative = "'" value:expr { return new cga.Relative( value ); }
 
-floating = "'" value:expr { return new cga.Floating( value ); }
+floating = "~" value:expr { return new cga.Floating( value ); }
 
 comma = _ "," _
 
@@ -47,7 +47,7 @@ block_op = _ head:expr _ op:(colon/equals) _ operations:expr* _ { return new cga
 func_expr = axis / comp_selector / expr
 body_expr = _ p:(colon / pipe / expr) _ { return p; }
 
-expr = attrref / func / float / int / string / relative
+expr = attrref / func / float / int / string / relative / floating
 
 attrref = obj:ident "." field:ident { return new cga.AttrRef(obj, field); }
 

@@ -395,6 +395,11 @@ function eval_expr(processor, expr) {
   if (isCompSelector(expr)) return expr;
   if (isAxis(expr)) return expr;
   if (isNumeric(expr)) return expr;
+  if (isFloating(expr)) {
+    expr = new cga.Floating(expr.value); // clone
+    expr.value = eval_expr(processor, expr.value);
+    return expr;
+  }
   if (isRelative(expr)) {
     expr = new cga.Relative(expr.value); // clone
     expr.value = eval_expr(processor, expr.value);
