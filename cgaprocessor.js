@@ -231,6 +231,7 @@ function func_split(processor, input, axis, body) {
   var left = 0;
   splits.forEach( (s,i) => {
     var last = processor.applyOperations(sizes[i%sizes.length].operations, split_geometry(axis.value, input, left, left+s));
+    // TODO: this should go somewhere central
     if ( ( !processor.res.length || processor.res[processor.res.length-1] != last ) && last ) processor.res.push(last);
     left += s;
   });
@@ -297,6 +298,13 @@ function func_set(processor, input, attr, val) {
   return input;
 }
 
+function func_color(processor, input, val) {
+  if (!input.attrs) input.attrs = {};
+  if (!input.attrs.material) input.attrs.material = {};
+  input.attrs.material.color = eval_expr(processor, val);
+  return input;
+}
+
 var FUNCTIONS = { };
 
 
@@ -343,6 +351,10 @@ function isCompSelector(val) {
   return val instanceof cga.CompSelector;
 }
 
+function isString(val) {
+  isString.type = 'string';
+  return typeof val == 'string';
+}
 
 function eval_expr(processor, expr) {
   if ((typeof expr) == 'string') return expr;
@@ -400,6 +412,7 @@ register_func('extrude', 1, 1, isNumeric, false, func_extrude);
 register_func('taper', 1, 1, isNumeric, false, func_taper);
 register_func('rand', 0, 2, isNumeric, false, func_rand);
 register_func('set', 2, 2, [ isAttrRef, null ], false, func_set);
+register_func('color', 1, 1, isString, false, func_color);
 
 register_func('split', 1, 1, isAxis, true, func_split);
 register_func('comp', 1, 1, isCompSelector, true, func_comp);
@@ -438,6 +451,7 @@ Processor.prototype.applyOperations = function(ops, geometry) {
 };
 
 Processor.prototype.applyRule = function(rule, geometry) {
+  if (rule.name == 'NIL') return; // TODO: don't hardcode?
   if (!rule) {
     // leaf
     this.res.push(geometry.clone());
