@@ -152,9 +152,11 @@ function setup() {
     var lotGeom = new THREE.Geometry();
 
     if ( lot == 'triangle') {
-      lotGeom.vertices.push( new THREE.Vector3( -1, 0, 0 ) );
-      lotGeom.vertices.push( new THREE.Vector3(  1, 0, 0 ) );
-      lotGeom.vertices.push( new THREE.Vector3(  0, 0, 2*Math.sqrt(3)/2 ) );
+      var h = Math.sqrt(3);
+      lotGeom.vertices.push( new THREE.Vector3( -1, 0,  h/2 ) );
+      lotGeom.vertices.push( new THREE.Vector3(  0, 0, -h/2 ) );
+      lotGeom.vertices.push( new THREE.Vector3(  1, 0,  h/2 ) );
+
 
       lotGeom.faces.push( new THREE.Face3( 0, 2, 1 ) );
     } else if ( lot == 'square' ) {
