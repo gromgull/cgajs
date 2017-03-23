@@ -21,15 +21,18 @@ $.create = function(n, v, c) {
 
 var examples = {
   basic: 'Lot --> extrude(2) split(y) { 0.2 : r(0, rand(0,30), 0) Floor }*',
-  house: "Lot --> extrude(1) comp(f) { front: Front | side: Side | top: Roof | back : Back }\n\
+  house: "Lot --> extrude(1) comp(f) { front: Front | side: Side | top: Roof |  bottom: B }\n\
 \n\
-Roof --> color(\"red\") taper(1) \n\
+Roof -->  color(\"red\") taper(1) split(y) { '0.5 : R }\n\
+Front --> extrude(0.02) split(x) { ~0.3: Side | 0.6 : DoorWall | ~0.3: Side }\n\
 \n\
-Front --> color(\"white\") split(x) { '0.3: Wall | '0.4 : DoorWall | '0.3: Wall }\n\
+TopWall --> color(\"white\") \n\
 \n\
-DoorWall --> split(y) { '0.8: Door | '0.2 : Wall }\n\
+DoorWall --> split(y) { '0.8: Door | '0.2 : TopWall }\n\
 \n\
-Door --> color(\"white\")"
+Door --> color(\"0x999933\") t(0,0,0.02)\n\
+\n\
+Side --> color(\"white\") split(x) { ~0.3: W }*"
 };
 
 function setup() {
