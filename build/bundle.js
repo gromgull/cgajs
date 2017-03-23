@@ -45419,6 +45419,8 @@ function split_geometry(axis, geometry, left, right) {
 
   var leftbox, rightbox, offset;
 
+  if (!geometry.faces.length) return geometry;
+
   geometry.computeBoundingBox();
 
   _g = new THREEBSP(geometry);
@@ -45635,7 +45637,10 @@ function func_split(processor, input, axis, body) {
 
   var left = 0;
   splits.forEach( (s,i) => {
-    var last = processor.applyOperations(sizes[i%sizes.length].operations, split_geometry(axis.value, input, left, left+s));
+    var geom = split_geometry(axis.value, input, left, left+s);
+    geom.attr = input.attr;
+    var last = processor.applyOperations(sizes[i%sizes.length].operations, geom);
+    // TODO: this should go somewhere central
     if ( ( !processor.res.length || processor.res[processor.res.length-1] != last ) && last ) processor.res.push(last);
     left += s;
   });
@@ -45685,6 +45690,7 @@ function func_comp(processor, input, selector, body) {
         g.faces.push(new THREE.Face3(0,1,2));
 
         var last = processor.applyOperations(p.operations, g);
+        // TODO: this should go somewhere central
         if ( ( !processor.res.length || processor.res[processor.res.length-1] != last ) && last ) processor.res.push(last);
       });
 
@@ -45699,6 +45705,13 @@ function func_set(processor, input, attr, val) {
   if (!input.attrs) input.attrs = {};
   if (!input.attrs[attr.obj]) input.attrs[attr.obj] = {};
   input.attrs[attr.obj][attr.field] = eval_expr(processor, val);
+  return input;
+}
+
+function func_color(processor, input, val) {
+  if (!input.attrs) input.attrs = {};
+  if (!input.attrs.material) input.attrs.material = {};
+  input.attrs.material.color = eval_expr(processor, val);
   return input;
 }
 
@@ -45748,6 +45761,10 @@ function isCompSelector(val) {
   return val instanceof cga.CompSelector;
 }
 
+function isString(val) {
+  isString.type = 'string';
+  return typeof val == 'string';
+}
 
 function eval_expr(processor, expr) {
   if ((typeof expr) == 'string') return expr;
@@ -45805,6 +45822,7 @@ register_func('extrude', 1, 1, isNumeric, false, func_extrude);
 register_func('taper', 1, 1, isNumeric, false, func_taper);
 register_func('rand', 0, 2, isNumeric, false, func_rand);
 register_func('set', 2, 2, [ isAttrRef, null ], false, func_set);
+register_func('color', 1, 1, isString, false, func_color);
 
 register_func('split', 1, 1, isAxis, true, func_split);
 register_func('comp', 1, 1, isCompSelector, true, func_comp);
@@ -45848,6 +45866,7 @@ Processor.prototype.applyRule = function(rule, geometry) {
     this.res.push(geometry.clone());
     return geometry;
   } else if (rule instanceof cga.Rule) {
+    if (rule.name == 'NIL') return; // TODO: don't hardcode?
     return this.applyOperations(rule.successors, geometry);
   } else {
     throw "Unknown rule type: "+typeof rule;
@@ -47481,6 +47500,27 @@ function $(sel) {
   return document.querySelector(sel);
 }
 
+$.create = function(n, v, c) {
+  n = document.createElement(n);
+  for (var p in v)
+    n.setAttribute(p, v[p]);
+  if (c) n.innerHTML = c;
+  return n;
+};
+
+
+var examples = {
+  basic: 'Lot --> extrude(2) split(y) { 0.2 : r(0, rand(0,30), 0) Floor }*',
+  house: "Lot --> extrude(1) comp(f) { front: Front | side: Side | top: Roof | back : Back }\n\
+\n\
+Roof --> color(\"red\") taper(1) \n\
+\n\
+Front --> color(\"white\") split(x) { '0.3: Wall | '0.4 : DoorWall | '0.3: Wall }\n\
+\n\
+DoorWall --> split(y) { '0.8: Door | '0.2 : Wall }\n\
+\n\
+Door --> color(\"white\")"
+};
 
 function setup() {
   var canvas = $('canvas');
@@ -47495,6 +47535,13 @@ function setup() {
   });
 
   $('#updateBtn').addEventListener('click', update);
+
+  Object.keys(examples).forEach(e => $('.example-selector').appendChild( $.create('option', null, e) ) );
+  $('.example-selector').addEventListener('change', e => {
+    if (!e.target.value) return;
+    $('textarea').value = examples[e.target.value];
+    parse();
+  });
 
   var grammarText = localStorage.getItem('grammar');
   if (grammarText) $('textarea').value = grammarText;
@@ -47554,6 +47601,14 @@ function setup() {
   // var helper = new THREE.CameraHelper( light.shadow.camera );
   // scene.add( helper );
   scene.add(new THREE.AmbientLight( 0x404040 )); // soft white light
+
+  window.addEventListener( 'resize', onWindowResize, false );
+
+  function onWindowResize() {
+	camera.aspect = canvas.parentElement.clientWidth / canvas.parentElement.clientHeight;
+	camera.updateProjectionMatrix();
+	renderer.setSize( canvas.parentElement.clientWidth-30, canvas.parentElement.clientHeight );
+  }
 
   function render() {
     controls.update();
