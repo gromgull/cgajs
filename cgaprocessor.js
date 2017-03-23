@@ -306,21 +306,29 @@ function func_comp(processor, input, selector, body) {
 
   parts.side = [].concat( parts.left || [], parts.right || [], parts.back || []);
 
+  console.log("Compo found these parts:");
+  Object.keys(parts).forEach(p => console.log(p, parts[p].length));
+
   body.parts.forEach( p => {
     if (p.op != ':' ) throw 'Illegal split operator, must be : was "{op}"'.format(p);
 
-    if (parts[p.head.name])
+    if (parts[p.head.name]) {
+      var g = new THREE.Geometry();
       parts[p.head.name].forEach( f => {
-        var g = new THREE.Geometry();
+        var l = g.vertices.length;
         g.vertices.push(input.vertices[f.a]);
         g.vertices.push(input.vertices[f.b]);
         g.vertices.push(input.vertices[f.c]);
-        g.faces.push(new THREE.Face3(0,1,2));
+        g.faces.push(new THREE.Face3(l+0,l+1,l+2));
 
-        var last = processor.applyOperations(p.operations, g);
-        // TODO: this should go somewhere central
-        if ( ( !processor.res.length || processor.res[processor.res.length-1] != last ) && last ) processor.res.push(last);
       });
+
+      g.mergeVertices();
+
+      var last = processor.applyOperations(p.operations, g);
+      // TODO: this should go somewhere central
+      if ( ( !processor.res.length || processor.res[processor.res.length-1] != last ) && last ) processor.res.push(last);
+    }
 
 
   });
