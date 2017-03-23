@@ -2,6 +2,8 @@ var cga = require("./cga");
 var THREE = require('three');
 var THREEBSP = require('./three-csg');
 
+var find_hard_edges = require('./edgespolygons.js').find_hard_edges;
+
 
 function split_array(a, sep) {
   var res = [], chunk=[];
@@ -71,7 +73,10 @@ function split_geometry(axis, geometry, left, right) {
 
 function func_extrude(processor, input, amount) {
 
-  geometry = new THREE.Geometry();
+  var geometry = new THREE.Geometry();
+
+  var hard_edges = find_hard_edges(input);
+
   input.faces.forEach(f => {
     var l = geometry.vertices.length;
 
@@ -91,14 +96,23 @@ function func_extrude(processor, input, amount) {
     // top
     geometry.faces.push( new THREE.Face3(l+3, l+4, l+5) );
 
-    geometry.faces.push( new THREE.Face3(l+0, l+4, l+3) );
-    geometry.faces.push( new THREE.Face3(l+1, l+4, l+0) );
+    // a-b
+    if (hard_edges[f.a+','+f.b]) {
+      geometry.faces.push( new THREE.Face3(l+0, l+4, l+3) );
+      geometry.faces.push( new THREE.Face3(l+1, l+4, l+0) );
+    }
 
-    geometry.faces.push( new THREE.Face3(l+0, l+3, l+5) );
-    geometry.faces.push( new THREE.Face3(l+0, l+5, l+2) );
+    // a-c
+    if (hard_edges[f.a+','+f.c]) {
+      geometry.faces.push( new THREE.Face3(l+0, l+3, l+5) );
+      geometry.faces.push( new THREE.Face3(l+0, l+5, l+2) );
+    }
 
-    geometry.faces.push( new THREE.Face3(l+1, l+5, l+4) );
-    geometry.faces.push( new THREE.Face3(l+1, l+2, l+5) );
+    // b-c
+    if (hard_edges[f.b+','+f.c]) {
+      geometry.faces.push( new THREE.Face3(l+1, l+5, l+4) );
+      geometry.faces.push( new THREE.Face3(l+1, l+2, l+5) );
+    }
 
 
   });
@@ -112,25 +126,39 @@ function func_taper(processor, input, amount) {
   geometry = new THREE.Geometry();
   geometry.attrs = input.attrs;
 
-  var f = input.faces[0];
+  var hard_edges = find_hard_edges(input);
+
   input.computeBoundingBox();
   input.computeFaceNormals();
 
   var c = input.boundingBox.getCenter();
 
-  v = c.addScaledVector(f.normal, amount);
+  input.faces.forEach( f => {
 
-  geometry.vertices.push( input.vertices[f.a] );
-  geometry.vertices.push( input.vertices[f.b] );
-  geometry.vertices.push( input.vertices[f.c] );
-  geometry.vertices.push( v );
+    var l = geometry.vertices.length;
 
-  // bottom
-  geometry.faces.push( new THREE.Face3(0, 2, 1) );
+    var v = c.clone().addScaledVector(f.normal, amount);
 
-  geometry.faces.push( new THREE.Face3(0, 1, 3) );
-  geometry.faces.push( new THREE.Face3(1, 2, 3) );
-  geometry.faces.push( new THREE.Face3(2, 0, 3) );
+    geometry.vertices.push( input.vertices[f.a] );
+    geometry.vertices.push( input.vertices[f.b] );
+    geometry.vertices.push( input.vertices[f.c] );
+    geometry.vertices.push( v );
+
+    // bottom
+    geometry.faces.push( new THREE.Face3(l+0, l+2, l+1) );
+
+    if (hard_edges[f.a+','+f.b])
+      geometry.faces.push( new THREE.Face3(l+0, l+1, l+3) );
+
+    if (hard_edges[f.b+','+f.c])
+      geometry.faces.push( new THREE.Face3(l+1, l+2, l+3) );
+
+    if (hard_edges[f.c+','+f.a])
+      geometry.faces.push( new THREE.Face3(l+2, l+0, l+3) );
+
+  });
+
+  geometry.mergeVertices();
 
   return geometry;
 }
