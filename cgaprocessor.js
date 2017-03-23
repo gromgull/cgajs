@@ -4,6 +4,10 @@ var THREEBSP = require('./three-csg');
 
 var find_hard_edges = require('./edgespolygons.js').find_hard_edges;
 
+function clone_obj(obj) {
+  if (obj)
+    return JSON.parse(JSON.stringify(obj));
+}
 
 function split_array(a, sep) {
   var res = [], chunk=[];
@@ -74,6 +78,7 @@ function split_geometry(axis, geometry, left, right) {
 function func_extrude(processor, input, amount) {
 
   var geometry = new THREE.Geometry();
+  geometry.attrs = clone_obj(input.attrs);
 
   var hard_edges = find_hard_edges(input);
 
@@ -124,7 +129,7 @@ function func_extrude(processor, input, amount) {
 function func_taper(processor, input, amount) {
 
   geometry = new THREE.Geometry();
-  geometry.attrs = input.attrs;
+  geometry.attrs = clone_obj(input.attrs);
 
   var hard_edges = find_hard_edges(input);
 
@@ -261,7 +266,7 @@ function func_split(processor, input, axis, body) {
   var left = 0;
   splits.forEach( (s,i) => {
     var geom = split_geometry(axis.value, input, left, left+s);
-    geom.attr = input.attr;
+    geom.attrs = clone_obj(input.attrs);
     var last = processor.applyOperations(sizes[i%sizes.length].operations, geom);
     // TODO: this should go somewhere central
     if ( ( !processor.res.length || processor.res[processor.res.length-1] != last ) && last ) processor.res.push(last);
@@ -327,15 +332,14 @@ function func_comp(processor, input, selector, body) {
 function func_set(processor, input, attr, val) {
   if (!input.attrs) input.attrs = {};
   if (!input.attrs[attr.obj]) input.attrs[attr.obj] = {};
-  input.attrs[attr.obj][attr.field] = eval_expr(processor, val);
+
+  if (val.indexOf('0x') === 0) val = parseInt(val, 16);
+  input.attrs[attr.obj][attr.field] = val;
   return input;
 }
 
 function func_color(processor, input, val) {
-  if (!input.attrs) input.attrs = {};
-  if (!input.attrs.material) input.attrs.material = {};
-  input.attrs.material.color = eval_expr(processor, val);
-  return input;
+  return func_set(processor, input, new cga.AttrRef('material', 'color'), val);
 }
 
 var FUNCTIONS = { };
