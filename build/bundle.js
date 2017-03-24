@@ -45414,6 +45414,10 @@ var THREEBSP = __webpack_require__(7);
 
 var find_hard_edges = __webpack_require__(6).find_hard_edges;
 
+function peek(arr) {
+  return arr[arr.length-1];
+}
+
 function clone_obj(obj) {
   if (obj)
     return JSON.parse(JSON.stringify(obj));
@@ -45474,36 +45478,36 @@ function split_geometry(axis, geometry, left, right) {
   g.mergeVertices();
   g.computeBoundingBox();
 
-  console.log('Split {min}, {max} at {left}-{right} and got {newmin}, {newmax}'.format({min: JSON.stringify(geometry.boundingBox.min),
-                                                                                        max: JSON.stringify(geometry.boundingBox.max),
-                                                                                        left: left,
-                                                                                        right: right,
-                                                                                        newmin: JSON.stringify(g.boundingBox.min),
-                                                                                        newmax: JSON.stringify(g.boundingBox.max) }));
+  // console.log('Split {min}, {max} at {left}-{right} and got {newmin}, {newmax}'.format({min: JSON.stringify(geometry.boundingBox.min),
+  //                                                                                       max: JSON.stringify(geometry.boundingBox.max),
+  //                                                                                       left: left,
+  //                                                                                       right: right,
+  //                                                                                       newmin: JSON.stringify(g.boundingBox.min),
+  //                                                                                       newmax: JSON.stringify(g.boundingBox.max) }));
 
   return g;
 
 }
 
-function func_extrude(processor, input, amount) {
+function func_extrude(processor, amount) {
 
   var geometry = new THREE.Geometry();
-  geometry.attrs = clone_obj(input.attrs);
+  geometry.attrs = clone_obj(processor.top.attrs);
 
-  var hard_edges = find_hard_edges(input);
+  var hard_edges = find_hard_edges(processor.top);
 
-  input.faces.forEach(f => {
+  processor.top.faces.forEach(f => {
     var l = geometry.vertices.length;
 
-    geometry.vertices.push( input.vertices[f.a] );
-    geometry.vertices.push( input.vertices[f.b] );
-    geometry.vertices.push( input.vertices[f.c] );
+    geometry.vertices.push( processor.top.vertices[f.a] );
+    geometry.vertices.push( processor.top.vertices[f.b] );
+    geometry.vertices.push( processor.top.vertices[f.c] );
 
     var extrude = v => v.clone().addScaledVector(f.normal, amount);
 
-    geometry.vertices.push( extrude(input.vertices[f.a] ));
-    geometry.vertices.push( extrude(input.vertices[f.b] ));
-    geometry.vertices.push( extrude(input.vertices[f.c] ));
+    geometry.vertices.push( extrude(processor.top.vertices[f.a] ));
+    geometry.vertices.push( extrude(processor.top.vertices[f.b] ));
+    geometry.vertices.push( extrude(processor.top.vertices[f.c] ));
 
     // bottom
     geometry.faces.push( new THREE.Face3(l+0, l+2, l+1) );
@@ -45531,32 +45535,34 @@ function func_extrude(processor, input, amount) {
 
 
   });
-  console.log("From {v}/{f} vertices/faces, extruded {nv}/{nf}".format({v: input.vertices.length, f: input.faces.length,
+  console.log("From {v}/{f} vertices/faces, extruded {nv}/{nf}".format({v: processor.top.vertices.length, f: processor.top.faces.length,
                                                                         nv: geometry.vertices.length, nf: geometry.vertices.length }));
-  return geometry;
+
+  processor.update( geometry );
+
 }
 
-function func_taper(processor, input, amount) {
+function func_taper(processor, amount) {
 
   geometry = new THREE.Geometry();
-  geometry.attrs = clone_obj(input.attrs);
+  geometry.attrs = clone_obj(processor.top.attrs);
 
-  var hard_edges = find_hard_edges(input);
+  var hard_edges = find_hard_edges(processor.top);
 
-  input.computeBoundingBox();
-  input.computeFaceNormals();
+  processor.top.computeBoundingBox();
+  processor.top.computeFaceNormals();
 
-  var c = input.boundingBox.getCenter();
+  var c = processor.top.boundingBox.getCenter();
 
-  input.faces.forEach( f => {
+  processor.top.faces.forEach( f => {
 
     var l = geometry.vertices.length;
 
     var v = c.clone().addScaledVector(f.normal, amount);
 
-    geometry.vertices.push( input.vertices[f.a] );
-    geometry.vertices.push( input.vertices[f.b] );
-    geometry.vertices.push( input.vertices[f.c] );
+    geometry.vertices.push( processor.top.vertices[f.a] );
+    geometry.vertices.push( processor.top.vertices[f.b] );
+    geometry.vertices.push( processor.top.vertices[f.c] );
     geometry.vertices.push( v );
 
     // bottom
@@ -45575,21 +45581,22 @@ function func_taper(processor, input, amount) {
 
   geometry.mergeVertices();
 
-  return geometry;
+  processor.update(geometry);
+
 }
 
 
-function func_scale(processor, input, x,y,z) {
+function func_scale(processor, x,y,z) {
   // this gets relative objects
-  return input.scale(x.value, y.value, z.value);
+  processor.top.scale(x.value, y.value, z.value);
 }
 
-function func_translate(processor, input, x,y,z) {
-  return input.translate(x,y,z);
+function func_translate(processor, x,y,z) {
+  processor.top.translate(x,y,z);
 }
 
-function func_rotate(processor, input, x,y,z) {
-  return input.rotateX(THREE.Math.degToRad(x))
+function func_rotate(processor, x,y,z) {
+  processor.top.rotateX(THREE.Math.degToRad(x))
     .rotateY(THREE.Math.degToRad(y))
     .rotateZ(THREE.Math.degToRad(z));
 }
@@ -45648,12 +45655,12 @@ function _compute_splits(sizes, size, repeat) {
   return res;
 }
 
-function func_split(processor, input, axis, body) {
+function func_split(processor, axis, body) {
 
   if ('xyz'.indexOf(axis.value)==-1) throw 'Illegal split-axis: {axis}, can only split by x, y or z'.format({axis:axis});
 
-  input.computeBoundingBox();
-  var size = input.boundingBox.max[axis.value]-input.boundingBox.min[axis.value];
+  processor.top.computeBoundingBox();
+  var size = processor.top.boundingBox.max[axis.value]-processor.top.boundingBox.min[axis.value];
 
   var parts = body.parts;
   total = 0;
@@ -45675,21 +45682,21 @@ function func_split(processor, input, axis, body) {
 
   var left = 0;
   splits.forEach( (s,i) => {
-    var geom = split_geometry(axis.value, input, left, left+s);
-    geom.attrs = clone_obj(input.attrs);
-    var last = processor.applyOperations(sizes[i%sizes.length].operations, geom);
-    // TODO: this should go somewhere central
-    if ( ( !processor.res.length || processor.res[processor.res.length-1] != last ) && last ) processor.res.push(last);
+    var geom = split_geometry(axis.value, processor.top, left, left+s);
+    geom.attrs = clone_obj(processor.top.attrs);
+    processor.stack.push(geom);
+    processor.applyOperations(sizes[i%sizes.length].operations);
+    processor.stack.pop();
     left += s;
   });
 
 }
 
-function func_comp(processor, input, selector, body) {
+function func_comp(processor, selector, body) {
 
   if (selector.value != 'f') throw 'Illegal comp-selector: {axis}, can only comp by fz'.format({axis:axis});
 
-  input.computeFaceNormals();
+  processor.top.computeFaceNormals();
 
   var directions = {
     front: new THREE.Vector3(0,0,1),
@@ -45703,7 +45710,7 @@ function func_comp(processor, input, selector, body) {
   var faces = {};
   var parts = {};
 
-  input.faces.forEach(f => {
+  processor.top.faces.forEach(f => {
     var angels = {};
     var dirs = Object.keys(directions);
     dirs.forEach(d => angels[d] = f.normal.angleTo(directions[d]));
@@ -45726,18 +45733,18 @@ function func_comp(processor, input, selector, body) {
       var g = new THREE.Geometry();
       parts[p.head.name].forEach( f => {
         var l = g.vertices.length;
-        g.vertices.push(input.vertices[f.a]);
-        g.vertices.push(input.vertices[f.b]);
-        g.vertices.push(input.vertices[f.c]);
+        g.vertices.push(processor.top.vertices[f.a]);
+        g.vertices.push(processor.top.vertices[f.b]);
+        g.vertices.push(processor.top.vertices[f.c]);
         g.faces.push(new THREE.Face3(l+0,l+1,l+2));
 
       });
 
       g.mergeVertices();
 
-      var last = processor.applyOperations(p.operations, g);
-      // TODO: this should go somewhere central
-      if ( ( !processor.res.length || processor.res[processor.res.length-1] != last ) && last ) processor.res.push(last);
+      processor.stack.push(g);
+      processor.applyOperations(p.operations);
+      processor.stack.pop();
     }
 
 
@@ -45747,17 +45754,16 @@ function func_comp(processor, input, selector, body) {
 }
 
 
-function func_set(processor, input, attr, val) {
-  if (!input.attrs) input.attrs = {};
-  if (!input.attrs[attr.obj]) input.attrs[attr.obj] = {};
+function func_set(processor, attr, val) {
+  if (!processor.top.attrs) processor.top.attrs = {};
+  if (!processor.top.attrs[attr.obj]) processor.top.attrs[attr.obj] = {};
 
   if (val.indexOf('0x') === 0) val = parseInt(val, 16);
-  input.attrs[attr.obj][attr.field] = val;
-  return input;
+  processor.top.attrs[attr.obj][attr.field] = val;
 }
 
-function func_color(processor, input, val) {
-  return func_set(processor, input, new cga.AttrRef('material', 'color'), val);
+function func_color(processor, val) {
+  func_set(processor, new cga.AttrRef('material', 'color'), val);
 }
 
 var FUNCTIONS = { };
@@ -45829,13 +45835,13 @@ function eval_expr(processor, expr) {
   }
   if (isFunction(expr)) {
     if (!FUNCTIONS[expr.name]) throw "Undefined function '{name}'".format({name:expr.name});
-    return FUNCTIONS[expr.name](processor, null, expr); // object in scope?
+    return FUNCTIONS[expr.name](processor, expr);
   }
   throw "Cannot evaluation expression: "+expr;
 }
 function register_func(name, min_params, max_params, validator, hasBody, func) {
 
-  FUNCTIONS[name] = (processor, geometry, f) => {
+  FUNCTIONS[name] = (processor, f) => {
 
     var no_params = f.params ? f.params.length : 0;
 
@@ -45859,7 +45865,7 @@ function register_func(name, min_params, max_params, validator, hasBody, func) {
         throw 'Function {name} requires {type} parameters'.format({name:name, type: validator.type});
 
 
-    return func.apply( null, [ processor, geometry ].concat( params, [f.body] ) );
+    return func.apply( null, [ processor ].concat( params, [f.body] ) );
 
   };
 }
@@ -45885,42 +45891,79 @@ function Processor(grammar) {
   grammar.rules.forEach(r => this.rules[r.name] = r);
 }
 
+Processor.prototype = {
+  get top() {
+    if (!this.stack.length) return;
+    return peek(this.stack);
+  }
+};
+
+// replace the top of the stack with this geo
+Processor.prototype.update = function (g) {
+  this.stack.pop();
+  this.stack.push(g);
+};
+
 Processor.prototype.process = function(lot) {
+  this.stack = [lot];
+
   this.res = [];
+  this.applyRule(this.rules.Lot);
 
-  var last = this.applyRule(this.rules.Lot, lot);
-  if ( ( !this.res.length || this.res[this.res.length-1] != last ) && last ) this.res.push(last);
+  var flat = [];
+  function traverse(res) {
+    res.forEach( r => {
+      if (r instanceof Array)
+        traverse(r);
+      else
+        flat.push(r);
+    });
+  }
 
-  return this.res;
+  traverse(this.res);
+
+  return flat;
 
 };
 
-Processor.prototype.applyFunction = function(geometry, func) {
+Processor.prototype.applyFunction = function(func) {
     if (FUNCTIONS[func.name]) {
-      return FUNCTIONS[func.name](this, geometry, func);
+      return FUNCTIONS[func.name](this, func);
     } else {
       if (func.params === null) {
-        return this.applyRule(this.rules[func.name], geometry);
+        console.log('applying', func.name);
+        return this.applyRule(this.rules[func.name]);
       }
     }
     throw 'Unknown function: '+func.name;
   };
 
-Processor.prototype.applyOperations = function(ops, geometry) {
-  return ops.reduce((g, f) => this.applyFunction(g,f), geometry);
+
+Processor.prototype.applyOperations = function(ops) {
+  var prev = this.res;
+  this.res = [];
+
+  ops.forEach( f => this.applyFunction(f) );
+
+  if ( !this.res.length && this.top ) {
+    this.res.push(this.top); // implicit leaf
+  }
+
+  prev.push(this.res);
+  this.res = prev;
 };
 
-Processor.prototype.applyRule = function(rule, geometry) {
+Processor.prototype.applyRule = function(rule) {
+
   if (!rule) {
     // leaf
-    this.res.push(geometry.clone());
-    return geometry;
+    this.res.push(this.top);
   } else if (rule instanceof cga.Rule) {
-    if (rule.name == 'NIL') return; // TODO: don't hardcode?
-    return this.applyOperations(rule.successors, geometry);
+    this.applyOperations(rule.successors);
   } else {
     throw "Unknown rule type: "+typeof rule;
   }
+
 };
 
 
@@ -47671,12 +47714,20 @@ Door --> color(\"0x999933\") t(0,0,0.02)\n\
 Side --> color(\"white\") split(x) { ~0.3: W }*"
 };
 
+
 function setup() {
   var canvas = $('canvas');
+
+  var FOGCOLOR = 0x112244;
+  var SHININESS = 30;
 
   var lot = 'triangle';
   var grammar;
   var last;
+  var group;
+
+  var renderer, camera, controls, scene;
+  var default_material, wire_material;
 
   $('.lot-selector').addEventListener('change', e => {
     lot=e.target.value;
@@ -47695,63 +47746,100 @@ function setup() {
   var grammarText = localStorage.getItem('grammar');
   if (grammarText) $('textarea').value = grammarText;
 
-  var scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2( 0x112244, 0.06 );
 
-  var camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 0.1, 1000 );
-  camera.position.z = 5;
-  camera.position.y = 3;
-  camera.rotation.x = -0.5;
-  camera.aspect = canvas.clientWidth / canvas.clientHeight;
+  setupThreejs();
 
-  var controls = new OrbitControls( camera, canvas );
-  controls.autoRotate = true;
-  controls.enableZoom = true;
-  controls.maxPolarAngle = Math.PI/2-0.01;
+  createScene();
 
-  var renderer = new THREE.WebGLRenderer({ antialias: true, canvas: canvas });
-  renderer.setSize( canvas.clientWidth, canvas.clientHeight );
-  renderer.setClearColor( scene.fog.color );
-  renderer.shadowMap.soft = true;
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap; // default THREE.PCFShadowMap
+  parse();
 
+  render();
 
-  var default_material = new THREE.MeshLambertMaterial( { color: 0x6699ff } );
-  var wire_material = new THREE.LineBasicMaterial( { color: 0xffffff, linewidth: 2 } );
-  var grass_material = new THREE.MeshPhongMaterial( { color: 0x44bb55 } );
-
-  var group = new THREE.Group();
-  group.castShadow=true;
-  scene.add( group );
-
-  var ground = new THREE.Mesh(new THREE.PlaneGeometry( 150, 150 ), grass_material);
-  ground.receiveShadow = true;
-  ground.rotateX(-Math.PI/2);
-  ground.position.y = -0.01;
-  ground.scale.set(100,100,100);
-  scene.add(ground);
-
-
-  //Create a DirectionalLight and turn on shadows for the light
-  var light = new THREE.DirectionalLight( 0xffffff, 1, 100 );
-  light.position.set( 3, 2, 3); 			//default; light shining from top
-
-  light.castShadow = true;            // default false
-  //Set up shadow properties for the light
-  // light.shadow.mapSize.width = 1024;
-  // light.shadow.mapSize.height = 1024;
-
-
-  scene.add( light );
-
-
-  // //Create a helper for the shadow camera (optional)
-  // var helper = new THREE.CameraHelper( light.shadow.camera );
-  // scene.add( helper );
-  scene.add(new THREE.AmbientLight( 0x404040 )); // soft white light
 
   window.addEventListener( 'resize', onWindowResize, false );
+
+  $('textarea').addEventListener('keyup', parse);
+
+  $('canvas').addEventListener('keydown', e => { console.log(e); if (e.key==' ') controls.autoRotate = !controls.autoRotate; });
+
+
+
+  function setupThreejs() {
+    camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 0.1, 1000 );
+    camera.position.z = 5;
+    camera.position.y = 3;
+    camera.rotation.x = -0.5;
+    camera.aspect = canvas.clientWidth / canvas.clientHeight;
+
+    controls = new OrbitControls( camera, canvas );
+    controls.autoRotate = true;
+    controls.enableZoom = true;
+    controls.maxPolarAngle = Math.PI/2-0.01;
+
+    renderer = new THREE.WebGLRenderer({ antialias: true, canvas: canvas });
+    renderer.setSize( canvas.clientWidth, canvas.clientHeight );
+    renderer.setClearColor( FOGCOLOR );
+    renderer.shadowMap.soft = true;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap; // default THREE.PCFShadowMap
+
+  }
+
+  function createScene() {
+
+    scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2( FOGCOLOR, 0.06 );
+
+    default_material = new THREE.MeshLambertMaterial( { shininess: SHININESS, color: 0x6699ff } );
+
+    wire_material = new THREE.LineBasicMaterial( { color: 0xffffff, linewidth: 2 } );
+    var grass_material = new THREE.MeshPhongMaterial( { color: 0x44bb55 , shininess: 10 } );
+
+    group = new THREE.Group();
+    group.castShadow=true;
+    scene.add( group );
+
+    var ground = new THREE.Mesh(new THREE.PlaneGeometry( 150, 150 ), grass_material);
+    ground.receiveShadow = true;
+    ground.rotateX(-Math.PI/2);
+    ground.position.y = -0.01;
+    ground.scale.set(100,100,100);
+    scene.add(ground);
+
+    var size = 100;
+    var divisions = 100;
+
+    var gridHelper = new THREE.GridHelper( size, divisions );
+    scene.add( gridHelper );
+
+
+    //Create a DirectionalLight and turn on shadows for the light
+    var light = new THREE.DirectionalLight( 0xffffff, 1, 100 );
+    light.position.set( 3, 2, 3);
+
+    light.castShadow = true;            // default false
+
+
+    scene.add( light );
+
+    //Create a DirectionalLight and turn on shadows for the light
+    light = new THREE.DirectionalLight( 0xffffff, 0.3, 100 );
+    light.position.set( -2, 1, -4);
+
+    light.castShadow = true;            // default false
+
+
+    scene.add( light );
+
+
+
+    // //Create a helper for the shadow camera (optional)
+    // var helper = new THREE.CameraHelper( light.shadow.camera );
+    // scene.add( helper );
+    scene.add(new THREE.AmbientLight( 0x404040 )); // soft white light
+
+  }
+
 
   function onWindowResize() {
 	camera.aspect = canvas.parentElement.clientWidth / canvas.parentElement.clientHeight;
@@ -47764,13 +47852,6 @@ function setup() {
 	requestAnimationFrame( render );
 	renderer.render( scene, camera );
   }
-  render();
-
-
-  $('textarea').addEventListener('keyup', parse);
-
-  $('canvas').addEventListener('keydown', e => { console.log(e); if (e.key==' ') controls.autoRotate = !controls.autoRotate; });
-
 
   function parse() {
     if ($('textarea').value == last) return;
@@ -47840,7 +47921,9 @@ function setup() {
       var material = default_material;
 
       var attrs = r.attrs;
-      if ( attrs && attrs.material && attrs.material.color ) material = new THREE.MeshLambertMaterial({ color: attrs.material.color });
+      if ( attrs && attrs.material && attrs.material.color )
+        material = new THREE.MeshLambertMaterial({ shininess: default_material.shininess,
+                                                 color: attrs.material.color });
 
       var mesh = new THREE.Mesh(new THREE.BufferGeometry().fromGeometry(r), material);
       mesh.castShadow = true;
@@ -47853,8 +47936,6 @@ function setup() {
     });
 
   }
-
-  parse();
 }
 
 setup();
