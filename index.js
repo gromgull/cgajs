@@ -40,13 +40,14 @@ function setup() {
   var canvas = $('canvas');
 
   var FOGCOLOR = 0x112244;
+  var SHININESS = 30;
 
   var lot = 'triangle';
   var grammar;
   var last;
   var group;
 
-  var render, camera, controls, scene;
+  var renderer, camera, controls, scene;
   var default_material, wire_material;
 
   $('.lot-selector').addEventListener('change', e => {
@@ -110,7 +111,8 @@ function setup() {
     scene = new THREE.Scene();
     scene.fog = new THREE.FogExp2( FOGCOLOR, 0.06 );
 
-    default_material = new THREE.MeshPhongMaterial( { color: 0x6699ff } );
+    default_material = new THREE.MeshLambertMaterial( { shininess: SHININESS, color: 0x6699ff } );
+
     wire_material = new THREE.LineBasicMaterial( { color: 0xffffff, linewidth: 2 } );
     var grass_material = new THREE.MeshPhongMaterial( { color: 0x44bb55 , shininess: 10 } );
 
@@ -125,18 +127,31 @@ function setup() {
     ground.scale.set(100,100,100);
     scene.add(ground);
 
+    var size = 100;
+    var divisions = 100;
+
+    var gridHelper = new THREE.GridHelper( size, divisions );
+    scene.add( gridHelper );
+
 
     //Create a DirectionalLight and turn on shadows for the light
     var light = new THREE.DirectionalLight( 0xffffff, 1, 100 );
-    light.position.set( 3, 2, 3); 			//default; light shining from top
+    light.position.set( 3, 2, 3);
 
     light.castShadow = true;            // default false
-    //Set up shadow properties for the light
-    // light.shadow.mapSize.width = 1024;
-    // light.shadow.mapSize.height = 1024;
 
 
     scene.add( light );
+
+    //Create a DirectionalLight and turn on shadows for the light
+    light = new THREE.DirectionalLight( 0xffffff, 0.3, 100 );
+    light.position.set( -2, 1, -4);
+
+    light.castShadow = true;            // default false
+
+
+    scene.add( light );
+
 
 
     // //Create a helper for the shadow camera (optional)
@@ -227,7 +242,9 @@ function setup() {
       var material = default_material;
 
       var attrs = r.attrs;
-      if ( attrs && attrs.material && attrs.material.color ) material = new THREE.MeshPhongMaterial({ color: attrs.material.color });
+      if ( attrs && attrs.material && attrs.material.color )
+        material = new THREE.MeshLambertMaterial({ shininess: default_material.shininess,
+                                                 color: attrs.material.color });
 
       var mesh = new THREE.Mesh(new THREE.BufferGeometry().fromGeometry(r), material);
       mesh.castShadow = true;
