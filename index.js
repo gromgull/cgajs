@@ -35,12 +35,19 @@ Door --> color(\"0x999933\") t(0,0,0.02)\n\
 Side --> color(\"white\") split(x) { ~0.3: W }*"
 };
 
+
 function setup() {
   var canvas = $('canvas');
+
+  var FOGCOLOR = 0x112244;
 
   var lot = 'triangle';
   var grammar;
   var last;
+  var group;
+
+  var render, camera, controls, scene;
+  var default_material, wire_material;
 
   $('.lot-selector').addEventListener('change', e => {
     lot=e.target.value;
@@ -59,63 +66,86 @@ function setup() {
   var grammarText = localStorage.getItem('grammar');
   if (grammarText) $('textarea').value = grammarText;
 
-  var scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2( 0x112244, 0.06 );
 
-  var camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 0.1, 1000 );
-  camera.position.z = 5;
-  camera.position.y = 3;
-  camera.rotation.x = -0.5;
-  camera.aspect = canvas.clientWidth / canvas.clientHeight;
+  setupThreejs();
 
-  var controls = new OrbitControls( camera, canvas );
-  controls.autoRotate = true;
-  controls.enableZoom = true;
-  controls.maxPolarAngle = Math.PI/2-0.01;
+  createScene();
 
-  var renderer = new THREE.WebGLRenderer({ antialias: true, canvas: canvas });
-  renderer.setSize( canvas.clientWidth, canvas.clientHeight );
-  renderer.setClearColor( scene.fog.color );
-  renderer.shadowMap.soft = true;
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap; // default THREE.PCFShadowMap
+  parse();
 
+  render();
 
-  var default_material = new THREE.MeshLambertMaterial( { color: 0x6699ff } );
-  var wire_material = new THREE.LineBasicMaterial( { color: 0xffffff, linewidth: 2 } );
-  var grass_material = new THREE.MeshPhongMaterial( { color: 0x44bb55 } );
-
-  var group = new THREE.Group();
-  group.castShadow=true;
-  scene.add( group );
-
-  var ground = new THREE.Mesh(new THREE.PlaneGeometry( 150, 150 ), grass_material);
-  ground.receiveShadow = true;
-  ground.rotateX(-Math.PI/2);
-  ground.position.y = -0.01;
-  ground.scale.set(100,100,100);
-  scene.add(ground);
-
-
-  //Create a DirectionalLight and turn on shadows for the light
-  var light = new THREE.DirectionalLight( 0xffffff, 1, 100 );
-  light.position.set( 3, 2, 3); 			//default; light shining from top
-
-  light.castShadow = true;            // default false
-  //Set up shadow properties for the light
-  // light.shadow.mapSize.width = 1024;
-  // light.shadow.mapSize.height = 1024;
-
-
-  scene.add( light );
-
-
-  // //Create a helper for the shadow camera (optional)
-  // var helper = new THREE.CameraHelper( light.shadow.camera );
-  // scene.add( helper );
-  scene.add(new THREE.AmbientLight( 0x404040 )); // soft white light
 
   window.addEventListener( 'resize', onWindowResize, false );
+
+  $('textarea').addEventListener('keyup', parse);
+
+  $('canvas').addEventListener('keydown', e => { console.log(e); if (e.key==' ') controls.autoRotate = !controls.autoRotate; });
+
+
+
+  function setupThreejs() {
+    camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 0.1, 1000 );
+    camera.position.z = 5;
+    camera.position.y = 3;
+    camera.rotation.x = -0.5;
+    camera.aspect = canvas.clientWidth / canvas.clientHeight;
+
+    controls = new OrbitControls( camera, canvas );
+    controls.autoRotate = true;
+    controls.enableZoom = true;
+    controls.maxPolarAngle = Math.PI/2-0.01;
+
+    renderer = new THREE.WebGLRenderer({ antialias: true, canvas: canvas });
+    renderer.setSize( canvas.clientWidth, canvas.clientHeight );
+    renderer.setClearColor( FOGCOLOR );
+    renderer.shadowMap.soft = true;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap; // default THREE.PCFShadowMap
+
+  }
+
+  function createScene() {
+
+    scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2( FOGCOLOR, 0.06 );
+
+    default_material = new THREE.MeshPhongMaterial( { color: 0x6699ff } );
+    wire_material = new THREE.LineBasicMaterial( { color: 0xffffff, linewidth: 2 } );
+    var grass_material = new THREE.MeshPhongMaterial( { color: 0x44bb55 , shininess: 10 } );
+
+    group = new THREE.Group();
+    group.castShadow=true;
+    scene.add( group );
+
+    var ground = new THREE.Mesh(new THREE.PlaneGeometry( 150, 150 ), grass_material);
+    ground.receiveShadow = true;
+    ground.rotateX(-Math.PI/2);
+    ground.position.y = -0.01;
+    ground.scale.set(100,100,100);
+    scene.add(ground);
+
+
+    //Create a DirectionalLight and turn on shadows for the light
+    var light = new THREE.DirectionalLight( 0xffffff, 1, 100 );
+    light.position.set( 3, 2, 3); 			//default; light shining from top
+
+    light.castShadow = true;            // default false
+    //Set up shadow properties for the light
+    // light.shadow.mapSize.width = 1024;
+    // light.shadow.mapSize.height = 1024;
+
+
+    scene.add( light );
+
+
+    // //Create a helper for the shadow camera (optional)
+    // var helper = new THREE.CameraHelper( light.shadow.camera );
+    // scene.add( helper );
+    scene.add(new THREE.AmbientLight( 0x404040 )); // soft white light
+
+  }
+
 
   function onWindowResize() {
 	camera.aspect = canvas.parentElement.clientWidth / canvas.parentElement.clientHeight;
@@ -128,10 +158,6 @@ function setup() {
 	requestAnimationFrame( render );
 	renderer.render( scene, camera );
   }
-  render();
-
-
-  $('textarea').addEventListener('keyup', parse);
 
   function parse() {
     if ($('textarea').value == last) return;
@@ -201,7 +227,7 @@ function setup() {
       var material = default_material;
 
       var attrs = r.attrs;
-      if ( attrs && attrs.material && attrs.material.color ) material = new THREE.MeshLambertMaterial({ color: attrs.material.color });
+      if ( attrs && attrs.material && attrs.material.color ) material = new THREE.MeshPhongMaterial({ color: attrs.material.color });
 
       var mesh = new THREE.Mesh(new THREE.BufferGeometry().fromGeometry(r), material);
       mesh.castShadow = true;
@@ -214,8 +240,6 @@ function setup() {
     });
 
   }
-
-  parse();
 }
 
 setup();
