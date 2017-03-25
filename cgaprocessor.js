@@ -91,9 +91,9 @@ function func_extrude(processor, amount) {
   processor.top.faces.forEach(f => {
     var l = geometry.vertices.length;
 
-    geometry.vertices.push( processor.top.vertices[f.a] );
-    geometry.vertices.push( processor.top.vertices[f.b] );
-    geometry.vertices.push( processor.top.vertices[f.c] );
+    geometry.vertices.push( processor.top.vertices[f.a].clone() );
+    geometry.vertices.push( processor.top.vertices[f.b].clone() );
+    geometry.vertices.push( processor.top.vertices[f.c].clone() );
 
     var extrude = v => v.clone().addScaledVector(f.normal, amount);
 
@@ -155,9 +155,9 @@ function func_taper(processor, amount) {
 
     var v = c.clone().addScaledVector(f.normal, amount);
 
-    geometry.vertices.push( processor.top.vertices[f.a] );
-    geometry.vertices.push( processor.top.vertices[f.b] );
-    geometry.vertices.push( processor.top.vertices[f.c] );
+    geometry.vertices.push( processor.top.vertices[f.a].clone() );
+    geometry.vertices.push( processor.top.vertices[f.b].clone() );
+    geometry.vertices.push( processor.top.vertices[f.c].clone() );
     geometry.vertices.push( v );
 
     // bottom
@@ -328,9 +328,9 @@ function func_comp(processor, selector, body) {
       var g = processor.create();
       parts[p.head.name].forEach( f => {
         var l = g.vertices.length;
-        g.vertices.push(processor.top.vertices[f.a]);
-        g.vertices.push(processor.top.vertices[f.b]);
-        g.vertices.push(processor.top.vertices[f.c]);
+        g.vertices.push(processor.top.vertices[f.a].clone());
+        g.vertices.push(processor.top.vertices[f.b].clone());
+        g.vertices.push(processor.top.vertices[f.c].clone());
         g.faces.push(new THREE.Face3(l+0,l+1,l+2));
 
       });
