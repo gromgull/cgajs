@@ -1,7 +1,8 @@
 This is a JavaScript implementation of the parser, processor and
-visualiser for the ESRI Cityengine CGA Grammar language.
+visualiser for the CGA Shape Grammar language.
 
-!!!This is work in progress!
+For demo and docs see: https://gromgull.github.io/cgajs/
 
+Built with: 
 * ThreeJS for visualiation
 * PegJS for parsing
