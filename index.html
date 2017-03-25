@@ -56,9 +56,62 @@
                         </div>
                     </form>
                 </div>
+
+            </div>
+            <div class="row">
+                <div class="col-sm-12">
+                    <h1>Read this:</h1>
+                    <p>This is a parser, processor and visualiser for CGA Shape Grammars. It currently only implements a very small subset, and is certainly very buggy. It is only really tested in Chrome. </p>
+
+                    <p>Rotate the 3d view with left-mouse button, pan with the right, zoom with the scroll wheel. Type in the box, see changes in the 3d view. Chose the things from the drop-down menus.</p>
+
+                    <p>You grammar will be saved in localStorage, so you can come back later!</p>
+
+                    <p>
+                        Go look at the complete <a href="https://esri.github.io/esri-cityengine-sdk/html/cgaref/cgareference/cgaindex.html">CGA reference</a>.
+                        <p>
+                            Grab <a href="https://github.com/gromgull/cgajs">the source from GitHub</a>.
+                        </p>
+                        <h2>Implemented bits:</h2>
+                        <ul>
+                            <li>the grammar eval stack</li>
+                            <li>the world/object/pivot coordinate systems/transforms</li>
+                            <li>splitting in x/y/z axis (<code>split</code>)</li>
+                            <li>splitting into components (<code>comp</code>)</li>
+                            <li>setting color (<code>color("red")</code>)</li>
+                            <li><code>extrude</code> and <code>taper</code></li>
+                            <li>scale, rotate, translate by absolute/relative amounts<code>s, t, r</code></li>
+                            <li>the <code>rand</code> function</li>
+
+                        </ul>
+
+                        <h2>Missing bits I'd like to add</h2>
+                        <ul>
+                            <li>stack push/pop operator <code>[ .. ]</code></li>
+                            <li>aritmetic <code>scope.width/2</code></li>
+                            <li>builtin math functions</li>
+                            <li>nested splitting blocks</li>
+                            <li>rotating in other coordinate systems</li>
+                            <li>inserting primitives</li>
+                            <li><code>roof*</code></li>
+                            <li><code>envelope, offset, setback, ...</code></li>
+                        </ul>
+
+                        <h2>Missing bits I have no intention of adding</h2>
+                        <ul>
+                            <li>texture support</li>
+                            <li>inserting predefined obj files</li>
+                        </ul>
+
+                    </p>
+
+                    <p>
+                        Have fun!
+                    </p>
+                </div>
+
             </div>
         </div>
-
         <script src="build/bundle.js"></script>
 
     </body>

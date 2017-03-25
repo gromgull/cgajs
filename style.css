@@ -5,3 +5,5 @@
 #error { color: red; }
 
 canvas { width: 100% ; height: 90% }
+
+textarea { font-family: monospace }
