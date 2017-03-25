@@ -8,6 +8,17 @@ function peek(arr) {
   return arr[arr.length-1];
 }
 
+function quat_from_first_face(g) {
+  // CGA sub-shapes from comp have their coordinate system defined
+  // by the first vertex + the x axis along first edge.
+  var pivot_x = g.vertices[g.faces[0].b].clone().sub(g.vertices[g.faces[0].a]).normalize();
+
+  var quat = new THREE.Quaternion();
+  quat.setFromUnitVectors(new THREE.Vector3(1,0,0), pivot_x);
+
+  return quat;
+}
+
 function clone_obj(obj) {
   if (obj)
     return JSON.parse(JSON.stringify(obj));
@@ -84,22 +95,24 @@ function func_extrude(processor, amount) {
 
   var geometry = processor.create();
 
-  var hard_edges = find_hard_edges(processor.top);
+  var top = processor.top;
 
-  processor.top.computeFaceNormals();
+  var hard_edges = find_hard_edges(top);
 
-  processor.top.faces.forEach(f => {
+  top.computeFaceNormals();
+
+  top.faces.forEach(f => {
     var l = geometry.vertices.length;
 
-    geometry.vertices.push( processor.top.vertices[f.a].clone() );
-    geometry.vertices.push( processor.top.vertices[f.b].clone() );
-    geometry.vertices.push( processor.top.vertices[f.c].clone() );
+    geometry.vertices.push( top.vertices[f.a].clone() );
+    geometry.vertices.push( top.vertices[f.b].clone() );
+    geometry.vertices.push( top.vertices[f.c].clone() );
 
     var extrude = v => v.clone().addScaledVector(f.normal, amount);
 
-    geometry.vertices.push( extrude(processor.top.vertices[f.a] ));
-    geometry.vertices.push( extrude(processor.top.vertices[f.b] ));
-    geometry.vertices.push( extrude(processor.top.vertices[f.c] ));
+    geometry.vertices.push( extrude(top.vertices[f.a] ));
+    geometry.vertices.push( extrude(top.vertices[f.b] ));
+    geometry.vertices.push( extrude(top.vertices[f.c] ));
 
     // bottom
     geometry.faces.push( new THREE.Face3(l+0, l+2, l+1) );
@@ -109,20 +122,21 @@ function func_extrude(processor, amount) {
 
     // a-b
     if (hard_edges[f.a+','+f.b]) {
+      geometry.faces.push( new THREE.Face3(l+0, l+1, l+4) );
       geometry.faces.push( new THREE.Face3(l+0, l+4, l+3) );
-      geometry.faces.push( new THREE.Face3(l+1, l+4, l+0) );
     }
 
     // a-c
     if (hard_edges[f.a+','+f.c]) {
+      geometry.faces.push( new THREE.Face3(l+2, l+0, l+5) );
       geometry.faces.push( new THREE.Face3(l+0, l+3, l+5) );
-      geometry.faces.push( new THREE.Face3(l+0, l+5, l+2) );
+
     }
 
     // b-c
     if (hard_edges[f.b+','+f.c]) {
-      geometry.faces.push( new THREE.Face3(l+1, l+5, l+4) );
       geometry.faces.push( new THREE.Face3(l+1, l+2, l+5) );
+      geometry.faces.push( new THREE.Face3(l+1, l+5, l+4) );
     }
 
 
@@ -131,7 +145,7 @@ function func_extrude(processor, amount) {
 
   geometry.mergeVertices();
 
-  console.log("From {v}/{f} vertices/faces, extruded {nv}/{nf}".format({v: processor.top.vertices.length, f: processor.top.faces.length,
+  console.log("From {v}/{f} vertices/faces, extruded {nv}/{nf}".format({v: top.vertices.length, f: top.faces.length,
                                                                         nv: geometry.vertices.length, nf: geometry.faces.length }));
 
   processor.update( geometry );
@@ -196,7 +210,7 @@ function func_rotate(processor, x,y,z) {
     .rotateZ(THREE.Math.degToRad(z));
 }
 
-function func_rand(processor, _, min, max) {
+function func_rand(processor, min, max) {
   if (!max) { max = min; min = null; }
   if (!min) min = 0;
   if (!max) max = 1;
@@ -289,7 +303,7 @@ function func_split(processor, axis, body) {
 
 function func_comp(processor, selector, body) {
 
-  if (selector.value != 'f') throw 'Illegal comp-selector: {axis}, can only comp by fz'.format({axis:axis});
+  if (selector.value != 'f') throw 'Illegal comp-selector: {axis}, can only comp by faces (f)'.format({axis:axis});
 
   processor.top.computeFaceNormals();
 
@@ -316,7 +330,6 @@ function func_comp(processor, selector, body) {
 
   });
 
-  parts.side = [].concat( parts.left || [], parts.right || [], parts.back || []);
 
   console.log("Compo found these parts:");
   Object.keys(parts).forEach(p => console.log(p, parts[p].length));
@@ -324,23 +337,43 @@ function func_comp(processor, selector, body) {
   body.parts.forEach( p => {
     if (p.op != ':' ) throw 'Illegal split operator, must be : was "{op}"'.format(p);
 
-    if (parts[p.head.name]) {
-      var g = processor.create();
-      parts[p.head.name].forEach( f => {
-        var l = g.vertices.length;
-        g.vertices.push(processor.top.vertices[f.a].clone());
-        g.vertices.push(processor.top.vertices[f.b].clone());
-        g.vertices.push(processor.top.vertices[f.c].clone());
-        g.faces.push(new THREE.Face3(l+0,l+1,l+2));
+    var ops = [ parts[p.head.name] ];
 
-      });
+    if (p.head.name == 'side') ops = [ parts.left, parts.right, parts.back ];
 
-      g.mergeVertices();
+    ops.forEach(part => {
+      if (part) {
+        var g = processor.create();
+        part.forEach( f => {
+          var l = g.vertices.length;
+          g.vertices.push(processor.top.vertices[f.a].clone());
+          g.vertices.push(processor.top.vertices[f.b].clone());
+          g.vertices.push(processor.top.vertices[f.c].clone());
+          g.faces.push(new THREE.Face3(l+0,l+1,l+2));
 
-      processor.stack.push(g);
-      processor.applyOperations(p.operations);
-      processor.stack.pop();
-    }
+        });
+
+        g.mergeVertices();
+
+        processor.stack.push(g);
+
+        g.pivot = g.vertices[g.faces[0].a].clone();
+        g.pivotRotate = new THREE.Euler().setFromQuaternion( quat_from_first_face(g) );
+
+        // console.log('x axis', pivot_x, 'pivot', g.pivot, 'rot', g.pivotRotate);
+
+        processor.update_pivot_matrix();
+
+        // console.log('pre', g.vertices[g.faces[0].a], g.vertices[g.faces[0].b].clone().sub(g.vertices[g.faces[0].a]).normalize());
+
+        g.applyMatrix( g.pivotTransformInverse );
+
+        // console.log('post', g.vertices[g.faces[0].a], g.vertices[g.faces[0].b].clone().sub(g.vertices[g.faces[0].a]).normalize());
+
+        processor.applyOperations(p.operations);
+        processor.stack.pop();
+      }
+    });
 
 
   });
@@ -480,7 +513,7 @@ register_func('comp', 1, 1, isCompSelector, true, func_comp);
 
 function Processor(grammar) {
   this.data = {};
-  this.rules = {};
+  this.rules = { NIL : -1 };
 
   Object.assign(this.data, grammar.attr);
   grammar.rules.forEach(r => this.rules[r.name] = r);
@@ -497,7 +530,20 @@ Processor.prototype.create = function() {
   return this.set_attrs(new THREE.Geometry());
 };
 
+Processor.prototype.update_pivot_matrix = function() {
+  // recalculate transform matrix from pivot + pivotRotate
+  var g = this.top;
+  g.pivotTransform.makeRotationFromQuaternion(new THREE.Quaternion().setFromEuler(g.pivotRotate));
+  g.pivotTransform.setPosition(g.pivot);
+  g.pivotTransformInverse = new THREE.Matrix4().getInverse( g.pivotTransform );
+};
+
 Processor.prototype.set_attrs = function (geom) {
+  geom.pivot = this.top.pivot.clone();
+  geom.pivotRotate = this.top.pivotRotate.clone();
+  geom.pivotTransform = this.top.pivotTransform.clone();
+  geom.pivotTransformInverse = this.top.pivotTransformInverse.clone();
+
   geom.attrs = clone_obj(this.top.attrs);
   return geom;
 };
@@ -510,31 +556,23 @@ Processor.prototype.update = function (g) {
 
 Processor.prototype.process = function(lot) {
 
-  var object_cs_origin = lot.vertices[0];
-
-  if (!lot.faces[0].a === 0) throw "I assume the first face uses the first vertex!" // TODO
-  var object_x = lot.vertices[lot.faces[0].b].clone().sub(lot.vertices[0]).normalize();
-  console.log('objx', object_x);
-  var quat = new THREE.Quaternion();
-  quat.setFromUnitVectors(new THREE.Vector3(1,0,0), object_x);
+  if (lot.faces[0].a !== 0) throw "I assume the first face uses the first vertex!" // TODO
 
   var world = new THREE.Matrix4();
-  world.makeRotationFromQuaternion(quat);
-  world.setPosition( object_cs_origin );
+  world.makeRotationFromQuaternion(quat_from_first_face(lot));
+  world.setPosition( lot.vertices[0] );
 
   var inverse_world = new THREE.Matrix4();
   inverse_world.getInverse(world, true);
 
-  function _v(v) { return '('+v.x.toFixed(3)+', '+v.y.toFixed(3)+', '+v.z.toFixed(3)+')'; }
+  lot.applyMatrix(inverse_world);
 
-  console.log('world', _v(lot.vertices[0]), _v(lot.vertices[1]), lot.vertices[0].clone().sub(lot.vertices[1]).length());
-
-  lot.applyMatrix(world);
-  //lot.rotateY(Math.PI/2);
+  lot.pivot = new THREE.Vector3(0,0,0);
+  lot.pivotRotate = new THREE.Euler(0,0,0);
+  lot.pivotTransform = new THREE.Matrix4();
+  lot.pivotTransformInverse = new THREE.Matrix4();
 
   lot.computeFaceNormals();
-
-  console.log('obj', _v(lot.vertices[0]), _v(lot.vertices[1]), lot.vertices[0].clone().sub(lot.vertices[1]).length());
 
   this.stack = [lot];
 
@@ -546,18 +584,18 @@ Processor.prototype.process = function(lot) {
     res.forEach( r => {
       if (r instanceof Array)
         traverse(r);
-      else
+      else if (r !== null)
         flat.push(r);
     });
   }
 
   traverse(this.res);
 
-  //flat.forEach( geo => { geo.mergeVertices(); geo.rotateY(-Math.PI/2) } );
   flat.forEach( geo => {
     geo.computeFaceNormals();
     geo.computeVertexNormals();
-    geo.applyMatrix( inverse_world );
+
+    geo.applyMatrix( geo.pivotTransform.clone().premultiply( world ) );
   });
 
   return flat;
@@ -596,6 +634,9 @@ Processor.prototype.applyRule = function(rule) {
   if (!rule) {
     // leaf
     this.res.push(this.top);
+  } else if (rule == -1 ) {
+    // nil rule
+    this.res.push(null);
   } else if (rule instanceof cga.Rule) {
     this.applyOperations(rule.successors);
   } else {

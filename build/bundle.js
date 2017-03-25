@@ -45418,6 +45418,17 @@ function peek(arr) {
   return arr[arr.length-1];
 }
 
+function quat_from_first_face(g) {
+  // CGA sub-shapes from comp have their coordinate system defined
+  // by the first vertex + the x axis along first edge.
+  var pivot_x = g.vertices[g.faces[0].b].clone().sub(g.vertices[g.faces[0].a]).normalize();
+
+  var quat = new THREE.Quaternion();
+  quat.setFromUnitVectors(new THREE.Vector3(1,0,0), pivot_x);
+
+  return quat;
+}
+
 function clone_obj(obj) {
   if (obj)
     return JSON.parse(JSON.stringify(obj));
@@ -45441,6 +45452,7 @@ function split_geometry(axis, geometry, left, right) {
   _g = new THREEBSP(geometry);
 
   var bb = geometry.boundingBox.max.clone().sub(geometry.boundingBox.min);
+  bb.max( new THREE.Vector3( 0.01, 0.01, 0.01 ));
 
   if (left > bb[axis]) return new THREE.Geometry(); // empty
 
@@ -45478,12 +45490,12 @@ function split_geometry(axis, geometry, left, right) {
   g.mergeVertices();
   g.computeBoundingBox();
 
-  // console.log('Split {min}, {max} at {left}-{right} and got {newmin}, {newmax}'.format({min: JSON.stringify(geometry.boundingBox.min),
-  //                                                                                       max: JSON.stringify(geometry.boundingBox.max),
-  //                                                                                       left: left,
-  //                                                                                       right: right,
-  //                                                                                       newmin: JSON.stringify(g.boundingBox.min),
-  //                                                                                       newmax: JSON.stringify(g.boundingBox.max) }));
+  console.log('Split {min}, {max} at {left}-{right} and got {newmin}, {newmax}'.format({min: JSON.stringify(geometry.boundingBox.min),
+                                                                                        max: JSON.stringify(geometry.boundingBox.max),
+                                                                                        left: left,
+                                                                                        right: right,
+                                                                                        newmin: JSON.stringify(g.boundingBox.min),
+                                                                                        newmax: JSON.stringify(g.boundingBox.max) }));
 
   return g;
 
@@ -45491,23 +45503,26 @@ function split_geometry(axis, geometry, left, right) {
 
 function func_extrude(processor, amount) {
 
-  var geometry = new THREE.Geometry();
-  geometry.attrs = clone_obj(processor.top.attrs);
+  var geometry = processor.create();
 
-  var hard_edges = find_hard_edges(processor.top);
+  var top = processor.top;
 
-  processor.top.faces.forEach(f => {
+  var hard_edges = find_hard_edges(top);
+
+  top.computeFaceNormals();
+
+  top.faces.forEach(f => {
     var l = geometry.vertices.length;
 
-    geometry.vertices.push( processor.top.vertices[f.a] );
-    geometry.vertices.push( processor.top.vertices[f.b] );
-    geometry.vertices.push( processor.top.vertices[f.c] );
+    geometry.vertices.push( top.vertices[f.a].clone() );
+    geometry.vertices.push( top.vertices[f.b].clone() );
+    geometry.vertices.push( top.vertices[f.c].clone() );
 
     var extrude = v => v.clone().addScaledVector(f.normal, amount);
 
-    geometry.vertices.push( extrude(processor.top.vertices[f.a] ));
-    geometry.vertices.push( extrude(processor.top.vertices[f.b] ));
-    geometry.vertices.push( extrude(processor.top.vertices[f.c] ));
+    geometry.vertices.push( extrude(top.vertices[f.a] ));
+    geometry.vertices.push( extrude(top.vertices[f.b] ));
+    geometry.vertices.push( extrude(top.vertices[f.c] ));
 
     // bottom
     geometry.faces.push( new THREE.Face3(l+0, l+2, l+1) );
@@ -45517,26 +45532,31 @@ function func_extrude(processor, amount) {
 
     // a-b
     if (hard_edges[f.a+','+f.b]) {
+      geometry.faces.push( new THREE.Face3(l+0, l+1, l+4) );
       geometry.faces.push( new THREE.Face3(l+0, l+4, l+3) );
-      geometry.faces.push( new THREE.Face3(l+1, l+4, l+0) );
     }
 
     // a-c
     if (hard_edges[f.a+','+f.c]) {
+      geometry.faces.push( new THREE.Face3(l+2, l+0, l+5) );
       geometry.faces.push( new THREE.Face3(l+0, l+3, l+5) );
-      geometry.faces.push( new THREE.Face3(l+0, l+5, l+2) );
+
     }
 
     // b-c
     if (hard_edges[f.b+','+f.c]) {
-      geometry.faces.push( new THREE.Face3(l+1, l+5, l+4) );
       geometry.faces.push( new THREE.Face3(l+1, l+2, l+5) );
+      geometry.faces.push( new THREE.Face3(l+1, l+5, l+4) );
     }
 
 
   });
-  console.log("From {v}/{f} vertices/faces, extruded {nv}/{nf}".format({v: processor.top.vertices.length, f: processor.top.faces.length,
-                                                                        nv: geometry.vertices.length, nf: geometry.vertices.length }));
+
+
+  geometry.mergeVertices();
+
+  console.log("From {v}/{f} vertices/faces, extruded {nv}/{nf}".format({v: top.vertices.length, f: top.faces.length,
+                                                                        nv: geometry.vertices.length, nf: geometry.faces.length }));
 
   processor.update( geometry );
 
@@ -45544,8 +45564,7 @@ function func_extrude(processor, amount) {
 
 function func_taper(processor, amount) {
 
-  geometry = new THREE.Geometry();
-  geometry.attrs = clone_obj(processor.top.attrs);
+  var geometry = processor.create();
 
   var hard_edges = find_hard_edges(processor.top);
 
@@ -45560,9 +45579,9 @@ function func_taper(processor, amount) {
 
     var v = c.clone().addScaledVector(f.normal, amount);
 
-    geometry.vertices.push( processor.top.vertices[f.a] );
-    geometry.vertices.push( processor.top.vertices[f.b] );
-    geometry.vertices.push( processor.top.vertices[f.c] );
+    geometry.vertices.push( processor.top.vertices[f.a].clone() );
+    geometry.vertices.push( processor.top.vertices[f.b].clone() );
+    geometry.vertices.push( processor.top.vertices[f.c].clone() );
     geometry.vertices.push( v );
 
     // bottom
@@ -45601,7 +45620,7 @@ function func_rotate(processor, x,y,z) {
     .rotateZ(THREE.Math.degToRad(z));
 }
 
-function func_rand(processor, _, min, max) {
+function func_rand(processor, min, max) {
   if (!max) { max = min; min = null; }
   if (!min) min = 0;
   if (!max) max = 1;
@@ -45683,7 +45702,7 @@ function func_split(processor, axis, body) {
   var left = 0;
   splits.forEach( (s,i) => {
     var geom = split_geometry(axis.value, processor.top, left, left+s);
-    geom.attrs = clone_obj(processor.top.attrs);
+    processor.set_attrs(geom); // color, pivot ++
     processor.stack.push(geom);
     processor.applyOperations(sizes[i%sizes.length].operations);
     processor.stack.pop();
@@ -45694,7 +45713,7 @@ function func_split(processor, axis, body) {
 
 function func_comp(processor, selector, body) {
 
-  if (selector.value != 'f') throw 'Illegal comp-selector: {axis}, can only comp by fz'.format({axis:axis});
+  if (selector.value != 'f') throw 'Illegal comp-selector: {axis}, can only comp by faces (f)'.format({axis:axis});
 
   processor.top.computeFaceNormals();
 
@@ -45721,7 +45740,6 @@ function func_comp(processor, selector, body) {
 
   });
 
-  parts.side = [].concat( parts.left || [], parts.right || [], parts.back || []);
 
   console.log("Compo found these parts:");
   Object.keys(parts).forEach(p => console.log(p, parts[p].length));
@@ -45729,23 +45747,43 @@ function func_comp(processor, selector, body) {
   body.parts.forEach( p => {
     if (p.op != ':' ) throw 'Illegal split operator, must be : was "{op}"'.format(p);
 
-    if (parts[p.head.name]) {
-      var g = new THREE.Geometry();
-      parts[p.head.name].forEach( f => {
-        var l = g.vertices.length;
-        g.vertices.push(processor.top.vertices[f.a]);
-        g.vertices.push(processor.top.vertices[f.b]);
-        g.vertices.push(processor.top.vertices[f.c]);
-        g.faces.push(new THREE.Face3(l+0,l+1,l+2));
+    var ops = [ parts[p.head.name] ];
 
-      });
+    if (p.head.name == 'side') ops = [ parts.left, parts.right, parts.back ];
 
-      g.mergeVertices();
+    ops.forEach(part => {
+      if (part) {
+        var g = processor.create();
+        part.forEach( f => {
+          var l = g.vertices.length;
+          g.vertices.push(processor.top.vertices[f.a].clone());
+          g.vertices.push(processor.top.vertices[f.b].clone());
+          g.vertices.push(processor.top.vertices[f.c].clone());
+          g.faces.push(new THREE.Face3(l+0,l+1,l+2));
 
-      processor.stack.push(g);
-      processor.applyOperations(p.operations);
-      processor.stack.pop();
-    }
+        });
+
+        g.mergeVertices();
+
+        processor.stack.push(g);
+
+        g.pivot = g.vertices[g.faces[0].a].clone();
+        g.pivotRotate = new THREE.Euler().setFromQuaternion( quat_from_first_face(g) );
+
+        // console.log('x axis', pivot_x, 'pivot', g.pivot, 'rot', g.pivotRotate);
+
+        processor.update_pivot_matrix();
+
+        // console.log('pre', g.vertices[g.faces[0].a], g.vertices[g.faces[0].b].clone().sub(g.vertices[g.faces[0].a]).normalize());
+
+        g.applyMatrix( g.pivotTransformInverse );
+
+        // console.log('post', g.vertices[g.faces[0].a], g.vertices[g.faces[0].b].clone().sub(g.vertices[g.faces[0].a]).normalize());
+
+        processor.applyOperations(p.operations);
+        processor.stack.pop();
+      }
+    });
 
 
   });
@@ -45885,7 +45923,7 @@ register_func('comp', 1, 1, isCompSelector, true, func_comp);
 
 function Processor(grammar) {
   this.data = {};
-  this.rules = {};
+  this.rules = { NIL : -1 };
 
   Object.assign(this.data, grammar.attr);
   grammar.rules.forEach(r => this.rules[r.name] = r);
@@ -45898,6 +45936,28 @@ Processor.prototype = {
   }
 };
 
+Processor.prototype.create = function() {
+  return this.set_attrs(new THREE.Geometry());
+};
+
+Processor.prototype.update_pivot_matrix = function() {
+  // recalculate transform matrix from pivot + pivotRotate
+  var g = this.top;
+  g.pivotTransform.makeRotationFromQuaternion(new THREE.Quaternion().setFromEuler(g.pivotRotate));
+  g.pivotTransform.setPosition(g.pivot);
+  g.pivotTransformInverse = new THREE.Matrix4().getInverse( g.pivotTransform );
+};
+
+Processor.prototype.set_attrs = function (geom) {
+  geom.pivot = this.top.pivot.clone();
+  geom.pivotRotate = this.top.pivotRotate.clone();
+  geom.pivotTransform = this.top.pivotTransform.clone();
+  geom.pivotTransformInverse = this.top.pivotTransformInverse.clone();
+
+  geom.attrs = clone_obj(this.top.attrs);
+  return geom;
+};
+
 // replace the top of the stack with this geo
 Processor.prototype.update = function (g) {
   this.stack.pop();
@@ -45905,6 +45965,25 @@ Processor.prototype.update = function (g) {
 };
 
 Processor.prototype.process = function(lot) {
+
+  if (lot.faces[0].a !== 0) throw "I assume the first face uses the first vertex!" // TODO
+
+  var world = new THREE.Matrix4();
+  world.makeRotationFromQuaternion(quat_from_first_face(lot));
+  world.setPosition( lot.vertices[0] );
+
+  var inverse_world = new THREE.Matrix4();
+  inverse_world.getInverse(world, true);
+
+  lot.applyMatrix(inverse_world);
+
+  lot.pivot = new THREE.Vector3(0,0,0);
+  lot.pivotRotate = new THREE.Euler(0,0,0);
+  lot.pivotTransform = new THREE.Matrix4();
+  lot.pivotTransformInverse = new THREE.Matrix4();
+
+  lot.computeFaceNormals();
+
   this.stack = [lot];
 
   this.res = [];
@@ -45915,12 +45994,19 @@ Processor.prototype.process = function(lot) {
     res.forEach( r => {
       if (r instanceof Array)
         traverse(r);
-      else
+      else if (r !== null)
         flat.push(r);
     });
   }
 
   traverse(this.res);
+
+  flat.forEach( geo => {
+    geo.computeFaceNormals();
+    geo.computeVertexNormals();
+
+    geo.applyMatrix( geo.pivotTransform.clone().premultiply( world ) );
+  });
 
   return flat;
 
@@ -45958,6 +46044,9 @@ Processor.prototype.applyRule = function(rule) {
   if (!rule) {
     // leaf
     this.res.push(this.top);
+  } else if (rule == -1 ) {
+    // nil rule
+    this.res.push(null);
   } else if (rule instanceof cga.Rule) {
     this.applyOperations(rule.successors);
   } else {
@@ -47772,7 +47861,7 @@ function setup() {
     camera.aspect = canvas.clientWidth / canvas.clientHeight;
 
     controls = new OrbitControls( camera, canvas );
-    controls.autoRotate = true;
+    controls.autoRotate = false;
     controls.enableZoom = true;
     controls.maxPolarAngle = Math.PI/2-0.01;
 
@@ -47809,8 +47898,10 @@ function setup() {
     var size = 100;
     var divisions = 100;
 
-    var gridHelper = new THREE.GridHelper( size, divisions );
-    scene.add( gridHelper );
+    scene.add(new THREE.GridHelper( size, divisions ));
+    var axisHelper = new THREE.AxisHelper();
+    axisHelper.position.x += 3;
+    scene.add(axisHelper);
 
 
     //Create a DirectionalLight and turn on shadows for the light
@@ -47871,37 +47962,102 @@ function setup() {
     }
   }
 
-  function update() {
+  function square_lot() {
     var lotGeom = new THREE.Geometry();
+    lotGeom.vertices.push( new THREE.Vector3(  -1, 0, 1 ) );
+    lotGeom.vertices.push( new THREE.Vector3(  1, 0, 1 ) );
+
+    lotGeom.vertices.push( new THREE.Vector3( -1, 0, -1 ) );
+    lotGeom.vertices.push( new THREE.Vector3(  1, 0, -1 ) );
+
+    lotGeom.faces.push( new THREE.Face3( 0, 1, 2 ) );
+    lotGeom.faces.push( new THREE.Face3( 2, 1, 3 ) );
+
+    return lotGeom;
+  }
+
+  function triangle_lot() {
+    var lotGeom = new THREE.Geometry();
+    var h = Math.sqrt(3);
+    lotGeom.vertices.push( new THREE.Vector3( -1, 0,  h/2 ) );
+    lotGeom.vertices.push( new THREE.Vector3(  0, 0, -h/2 ) );
+    lotGeom.vertices.push( new THREE.Vector3(  1, 0,  h/2 ) );
+
+    lotGeom.faces.push( new THREE.Face3( 0, 2, 1 ) );
+    return lotGeom;
+  }
+
+  function circle_lot() {
+    var lotGeom = new THREE.Geometry();
+    var N = 16;
+    for (var i=0; i<N; i++) {
+      var r = i*2*Math.PI/N;
+      lotGeom.vertices.push( new THREE.Vector3( Math.sin(r), 0,  Math.cos(r) ) );
+    }
+    lotGeom.vertices.push( new THREE.Vector3( 0, 0, 0 ) );
+    var c = lotGeom.vertices.length-1;
+    for (i=0; i<N; i++) {
+      lotGeom.faces.push( new THREE.Face3( i, (i+1)%N, c) );
+    }
+
+    return lotGeom;
+
+  }
+
+  function random_lot() {
+    switch(Math.floor(Math.random()*3)) {
+      case 0: return triangle_lot();
+      case 1: return square_lot();
+      case 2: return circle_lot();
+    }
+  }
+
+  function update() {
+    var lotGeom;
 
     if ( lot == 'triangle') {
-      var h = Math.sqrt(3);
-      lotGeom.vertices.push( new THREE.Vector3( -1, 0,  h/2 ) );
-      lotGeom.vertices.push( new THREE.Vector3(  0, 0, -h/2 ) );
-      lotGeom.vertices.push( new THREE.Vector3(  1, 0,  h/2 ) );
-
-
-      lotGeom.faces.push( new THREE.Face3( 0, 2, 1 ) );
+      lotGeom = triangle_lot();
+    } else if ( lot == 'circle' ) {
+      lotGeom = circle_lot();
     } else if ( lot == 'square' ) {
-      lotGeom.vertices.push( new THREE.Vector3( -1, 0, -1 ) );
-      lotGeom.vertices.push( new THREE.Vector3(  1, 0, -1 ) );
-      lotGeom.vertices.push( new THREE.Vector3(  1, 0, 1 ) );
-      lotGeom.vertices.push( new THREE.Vector3(  -1, 0, 1 ) );
 
-      lotGeom.faces.push( new THREE.Face3( 0, 2, 1 ) );
-      lotGeom.faces.push( new THREE.Face3( 2, 0, 3 ) );
+      lotGeom = square_lot();
+      lotGeom.rotateY(Math.PI/4);
+      //lotGeom.translate(2.3,0,1.5);
+
     } else if (lot == 'rectangle') {
-      lotGeom.vertices.push( new THREE.Vector3( -1.5, 0, -1 ) );
-      lotGeom.vertices.push( new THREE.Vector3(  1.5, 0, -1 ) );
-      lotGeom.vertices.push( new THREE.Vector3(  1.5, 0, 1 ) );
-      lotGeom.vertices.push( new THREE.Vector3(  -1.5, 0, 1 ) );
 
-      lotGeom.faces.push( new THREE.Face3( 0, 2, 1 ) );
-      lotGeom.faces.push( new THREE.Face3( 2, 0, 3 ) );
+      lotGeom = square_lot().scale(1.5, 1, 1);
 
-    }
-    lotGeom.computeFaceNormals();
-    lotGeom.computeVertexNormals();
+    } else if (lot == '4squares') {
+
+      lotGeom = [];
+
+      lotGeom.push( square_lot() );
+      lotGeom.push( square_lot().rotateY(-Math.PI/2).translate(-3, 0, 0) );
+      lotGeom.push( square_lot().rotateY(Math.PI/2).translate(0, 0, 3) );
+      lotGeom.push( square_lot().rotateY(Math.PI).translate(-3, 0, 3) );
+
+
+    } else if (lot == '9squares') {
+
+      lotGeom = [];
+
+      for (var i = -1; i<2; i++ )
+        for (var j = -1; j<2; j++ )
+          lotGeom.push( square_lot().rotateY(Math.floor(Math.random()*4)*Math.PI/2).translate(i*3, 0, j*3) );
+
+    } else if (lot == '25random') {
+
+      lotGeom = [];
+
+      for (var i = -2; i<3; i++ )
+        for (var j = -2; j<3; j++ )
+          lotGeom.push( random_lot().rotateY(Math.random()*2*Math.PI).translate(i*3+Math.random()-0.5, 0, j*3+Math.random()-0.5) );
+
+    } else throw 'Unknown lot type: '+lot;
+
+    if (!(lotGeom instanceof Array)) lotGeom = [lotGeom];
 
     for( var i = group.children.length - 1; i >= 0; i--) {
       var e = group.children[i];
@@ -47911,28 +48067,34 @@ function setup() {
     }
 
     var proc = new cgaprocessor.Processor(grammar);
-    var res = proc.process(lotGeom);
-    console.log(res);
+    lotGeom.forEach(g => {
 
-    res.forEach(r => {
-      r.computeFaceNormals();
-      r.computeVertexNormals();
+      g.computeFaceNormals();
+      g.computeVertexNormals();
 
-      var material = default_material;
+      var res = proc.process(g);
+      console.log(res);
 
-      var attrs = r.attrs;
-      if ( attrs && attrs.material && attrs.material.color )
-        material = new THREE.MeshLambertMaterial({ shininess: default_material.shininess,
-                                                 color: attrs.material.color });
+      res.forEach(r => {
+        r.computeFaceNormals();
+        r.computeVertexNormals();
 
-      var mesh = new THREE.Mesh(new THREE.BufferGeometry().fromGeometry(r), material);
-      mesh.castShadow = true;
-      group.add(mesh);
+        var material = default_material;
 
-      var wireframe = new THREE.LineSegments( new THREE.EdgesGeometry(r), wire_material );
-      //var wireframe = new THREE.LineSegments( new THREE.WireframeGeometry(r), wire_material );
-      group.add( wireframe );
+        var attrs = r.attrs;
+        if ( attrs && attrs.material && attrs.material.color )
+          material = new THREE.MeshLambertMaterial({ shininess: default_material.shininess,
+                                                     color: attrs.material.color });
 
+        var mesh = new THREE.Mesh(new THREE.BufferGeometry().fromGeometry(r), material);
+        mesh.castShadow = true;
+        group.add(mesh);
+
+        var wireframe = new THREE.LineSegments( new THREE.EdgesGeometry(r), wire_material );
+        //var wireframe = new THREE.LineSegments( new THREE.WireframeGeometry(r), wire_material );
+        group.add( wireframe );
+
+      });
     });
 
   }
