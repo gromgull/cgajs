@@ -195,7 +195,7 @@ function setup() {
   }
 
   function square_lot() {
-    lotGeom = new THREE.Geometry();
+    var lotGeom = new THREE.Geometry();
     lotGeom.vertices.push( new THREE.Vector3(  -1, 0, 1 ) );
     lotGeom.vertices.push( new THREE.Vector3(  1, 0, 1 ) );
 
@@ -208,17 +208,41 @@ function setup() {
     return lotGeom;
   }
 
+  function triangle_lot() {
+    var lotGeom = new THREE.Geometry();
+    var h = Math.sqrt(3);
+    lotGeom.vertices.push( new THREE.Vector3( -1, 0,  h/2 ) );
+    lotGeom.vertices.push( new THREE.Vector3(  0, 0, -h/2 ) );
+    lotGeom.vertices.push( new THREE.Vector3(  1, 0,  h/2 ) );
+
+    lotGeom.faces.push( new THREE.Face3( 0, 2, 1 ) );
+    return lotGeom;
+  }
+
+  function circle_lot() {
+    var lotGeom = new THREE.Geometry();
+    var N = 16;
+    for (var i=0; i<N; i++) {
+      var r = i*2*Math.PI/N;
+      lotGeom.vertices.push( new THREE.Vector3( Math.sin(r), 0,  Math.cos(r) ) );
+    }
+    lotGeom.vertices.push( new THREE.Vector3( 0, 0, 0 ) );
+    var c = lotGeom.vertices.length-1;
+    for (i=0; i<N; i++) {
+      lotGeom.faces.push( new THREE.Face3( i, (i+1)%N, c) );
+    }
+
+    return lotGeom;
+
+  }
+
   function update() {
     var lotGeom;
 
     if ( lot == 'triangle') {
-      lotGeom = new THREE.Geometry();
-      var h = Math.sqrt(3);
-      lotGeom.vertices.push( new THREE.Vector3( -1, 0,  h/2 ) );
-      lotGeom.vertices.push( new THREE.Vector3(  0, 0, -h/2 ) );
-      lotGeom.vertices.push( new THREE.Vector3(  1, 0,  h/2 ) );
-
-      lotGeom.faces.push( new THREE.Face3( 0, 2, 1 ) );
+      lotGeom = triangle_lot();
+    } if ( lot == 'circle' ) {
+      lotGeom = circle_lot();
     } else if ( lot == 'square' ) {
 
       lotGeom = square_lot();
