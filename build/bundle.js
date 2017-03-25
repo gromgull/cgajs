@@ -45490,12 +45490,12 @@ function split_geometry(axis, geometry, left, right) {
   g.mergeVertices();
   g.computeBoundingBox();
 
-  console.log('Split {min}, {max} at {left}-{right} and got {newmin}, {newmax}'.format({min: JSON.stringify(geometry.boundingBox.min),
-                                                                                        max: JSON.stringify(geometry.boundingBox.max),
-                                                                                        left: left,
-                                                                                        right: right,
-                                                                                        newmin: JSON.stringify(g.boundingBox.min),
-                                                                                        newmax: JSON.stringify(g.boundingBox.max) }));
+  // console.log('Split {min}, {max} at {left}-{right} and got {newmin}, {newmax}'.format({min: JSON.stringify(geometry.boundingBox.min),
+  //                                                                                       max: JSON.stringify(geometry.boundingBox.max),
+  //                                                                                       left: left,
+  //                                                                                       right: right,
+  //                                                                                       newmin: JSON.stringify(g.boundingBox.min),
+  //                                                                                       newmax: JSON.stringify(g.boundingBox.max) }));
 
   return g;
 
@@ -45606,11 +45606,32 @@ function func_taper(processor, amount) {
 
 
 function func_scale(processor, x,y,z) {
+
+  var size = processor.size();
+
+  if (x instanceof cga.Relative) x = x.value;
+  else x = x/size.x;
+
+  if (y instanceof cga.Relative) y = y.value;
+  else y = y/size.y;
+
+  if (z instanceof cga.Relative) z = z.value;
+  else z = z/size.z;
+
   // this gets relative objects
-  processor.top.scale(x.value, y.value, z.value);
+  processor.top.scale(x, y, z);
 }
 
 function func_translate(processor, x,y,z) {
+
+  var size = processor.size();
+
+  if (x instanceof cga.Relative) x = x.value * size.x;
+
+  if (y instanceof cga.Relative) y = y.value * size.y;
+
+  if (z instanceof cga.Relative) z = z.value * size.z;
+
   processor.top.translate(x,y,z);
 }
 
@@ -45678,8 +45699,7 @@ function func_split(processor, axis, body) {
 
   if ('xyz'.indexOf(axis.value)==-1) throw 'Illegal split-axis: {axis}, can only split by x, y or z'.format({axis:axis});
 
-  processor.top.computeBoundingBox();
-  var size = processor.top.boundingBox.max[axis.value]-processor.top.boundingBox.min[axis.value];
+  var size = processor.size()[axis.value];
 
   var parts = body.parts;
   total = 0;
@@ -45822,6 +45842,10 @@ function isRelative(val) {
   return val instanceof cga.Relative;
 }
 
+function isNumericOrRelative(val) {
+  return isNumeric(val) || isRelative(val);
+}
+
 
 function isFloating(val) {
   isFloating.type = 'floating';
@@ -45909,9 +45933,9 @@ function register_func(name, min_params, max_params, validator, hasBody, func) {
 }
 
 
-register_func('s', 3, 3, isRelative, false, func_scale);
+register_func('s', 3, 3, isNumericOrRelative, false, func_scale);
 register_func('r', 3, 3, isNumeric, false, func_rotate);
-register_func('t', 3, 3, isNumeric, false, func_translate);
+register_func('t', 3, 3, isNumericOrRelative, false, func_translate);
 register_func('extrude', 1, 1, isNumeric, false, func_extrude);
 register_func('taper', 1, 1, isNumeric, false, func_taper);
 register_func('rand', 0, 2, isNumeric, false, func_rand);
@@ -45956,6 +45980,11 @@ Processor.prototype.set_attrs = function (geom) {
 
   geom.attrs = clone_obj(this.top.attrs);
   return geom;
+};
+
+Processor.prototype.size = function () {
+  this.top.computeBoundingBox();
+  return this.top.boundingBox.max.clone().sub(this.top.boundingBox.min);
 };
 
 // replace the top of the stack with this geo
@@ -47778,6 +47807,24 @@ function $(sel) {
   return document.querySelector(sel);
 }
 
+$.get = function(url, callback, error) {
+  var request = new XMLHttpRequest();
+  request.open('GET', url, true);
+
+  request.onload = () => {
+    if (request.status >= 200 && request.status < 400) {
+      if (callback) callback(request.responseText);
+    } else {
+      if (error) error();
+    }
+  };
+
+  request.onerror = error;
+
+  request.send();
+};
+
+
 $.create = function(n, v, c) {
   n = document.createElement(n);
   for (var p in v)
@@ -47787,27 +47834,11 @@ $.create = function(n, v, c) {
 };
 
 
-var examples = {
-  basic: 'Lot --> extrude(2) split(y) { 0.2 : r(0, rand(0,30), 0) Floor }*',
-  house: "Lot --> extrude(1) comp(f) { front: Front | side: Side | top: Roof |  bottom: B }\n\
-\n\
-Roof -->  color(\"red\") taper(1) split(y) { '0.5 : R }\n\
-Front --> extrude(0.02) split(x) { ~0.3: Side | 0.6 : DoorWall | ~0.3: Side }\n\
-\n\
-TopWall --> color(\"white\") \n\
-\n\
-DoorWall --> split(y) { '0.8: Door | '0.2 : TopWall }\n\
-\n\
-Door --> color(\"0x999933\") t(0,0,0.02)\n\
-\n\
-Side --> color(\"white\") split(x) { ~0.3: W }*"
-};
-
 
 function setup() {
   var canvas = $('canvas');
 
-  var FOGCOLOR = 0x112244;
+  var FOGCOLOR = 0x42bcf4;
   var SHININESS = 30;
 
   var lot = 'triangle';
@@ -47818,6 +47849,17 @@ function setup() {
   var renderer, camera, controls, scene;
   var default_material, wire_material;
 
+  var grid_size = 100;
+  var grid_divisions = 100;
+  var gridHelper = new THREE.GridHelper( grid_size, grid_divisions );
+  var axisHelper = new THREE.AxisHelper();
+  axisHelper.position.x += 3;
+
+  var showGrid = false;
+
+  var examples = {};
+
+
   $('.lot-selector').addEventListener('change', e => {
     lot=e.target.value;
     update();
@@ -47825,11 +47867,16 @@ function setup() {
 
   $('#updateBtn').addEventListener('click', update);
 
-  Object.keys(examples).forEach(e => $('.example-selector').appendChild( $.create('option', null, e) ) );
   $('.example-selector').addEventListener('change', e => {
     if (!e.target.value) return;
-    $('textarea').value = examples[e.target.value];
-    parse();
+
+    function set(val) {
+      examples[e.target.value] = val;
+      $('textarea').value = val;
+      parse();
+    }
+    if (examples[e.target.value]) set(examples[e.target.value]);
+    else $.get('examples/'+e.target.value+'.cga', set);
   });
 
   var grammarText = localStorage.getItem('grammar');
@@ -47844,14 +47891,28 @@ function setup() {
 
   render();
 
-
   window.addEventListener( 'resize', onWindowResize, false );
 
   $('textarea').addEventListener('keyup', parse);
 
   $('canvas').addEventListener('keydown', e => { console.log(e); if (e.key==' ') controls.autoRotate = !controls.autoRotate; });
 
+  $('.grid-checkbox').addEventListener('change', e => toggleGrid($('.grid-checkbox').checked) );
 
+
+  function toggleGrid(val) {
+
+    if (val) {
+      scene.add(gridHelper);
+      scene.add(axisHelper);
+      showGrid = true;
+    } else {
+      scene.remove(gridHelper);
+      scene.remove(axisHelper);
+      showGrid = false;
+    }
+    update();
+  }
 
   function setupThreejs() {
     camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 0.1, 1000 );
@@ -47895,14 +47956,6 @@ function setup() {
     ground.scale.set(100,100,100);
     scene.add(ground);
 
-    var size = 100;
-    var divisions = 100;
-
-    scene.add(new THREE.GridHelper( size, divisions ));
-    var axisHelper = new THREE.AxisHelper();
-    axisHelper.position.x += 3;
-    scene.add(axisHelper);
-
 
     //Create a DirectionalLight and turn on shadows for the light
     var light = new THREE.DirectionalLight( 0xffffff, 1, 100 );
@@ -47913,10 +47966,18 @@ function setup() {
 
     scene.add( light );
 
+    light = new THREE.DirectionalLight( 0xffffff, 0.3, 100 );
+    light.position.set( 0, 2, -3);
+
+    light.castShadow = true;            // default false
+
+
+    scene.add( light );
+
+
     //Create a DirectionalLight and turn on shadows for the light
     light = new THREE.DirectionalLight( 0xffffff, 0.3, 100 );
-    light.position.set( -2, 1, -4);
-
+    light.position.set( -3, 1, 0);
     light.castShadow = true;            // default false
 
 
@@ -48022,8 +48083,6 @@ function setup() {
     } else if ( lot == 'square' ) {
 
       lotGeom = square_lot();
-      lotGeom.rotateY(Math.PI/4);
-      //lotGeom.translate(2.3,0,1.5);
 
     } else if (lot == 'rectangle') {
 
@@ -48090,9 +48149,11 @@ function setup() {
         mesh.castShadow = true;
         group.add(mesh);
 
-        var wireframe = new THREE.LineSegments( new THREE.EdgesGeometry(r), wire_material );
-        //var wireframe = new THREE.LineSegments( new THREE.WireframeGeometry(r), wire_material );
-        group.add( wireframe );
+        if (showGrid) {
+          var wireframe = new THREE.LineSegments( new THREE.EdgesGeometry(r), wire_material );
+          //var wireframe = new THREE.LineSegments( new THREE.WireframeGeometry(r), wire_material );
+          group.add( wireframe );
+        }
 
       });
     });

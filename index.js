@@ -10,6 +10,24 @@ function $(sel) {
   return document.querySelector(sel);
 }
 
+$.get = function(url, callback, error) {
+  var request = new XMLHttpRequest();
+  request.open('GET', url, true);
+
+  request.onload = () => {
+    if (request.status >= 200 && request.status < 400) {
+      if (callback) callback(request.responseText);
+    } else {
+      if (error) error();
+    }
+  };
+
+  request.onerror = error;
+
+  request.send();
+};
+
+
 $.create = function(n, v, c) {
   n = document.createElement(n);
   for (var p in v)
@@ -19,27 +37,11 @@ $.create = function(n, v, c) {
 };
 
 
-var examples = {
-  basic: 'Lot --> extrude(2) split(y) { 0.2 : r(0, rand(0,30), 0) Floor }*',
-  house: "Lot --> extrude(1) comp(f) { front: Front | side: Side | top: Roof |  bottom: B }\n\
-\n\
-Roof -->  color(\"red\") taper(1) split(y) { '0.5 : R }\n\
-Front --> extrude(0.02) split(x) { ~0.3: Side | 0.6 : DoorWall | ~0.3: Side }\n\
-\n\
-TopWall --> color(\"white\") \n\
-\n\
-DoorWall --> split(y) { '0.8: Door | '0.2 : TopWall }\n\
-\n\
-Door --> color(\"0x999933\") t(0,0,0.02)\n\
-\n\
-Side --> color(\"white\") split(x) { ~0.3: W }*"
-};
-
 
 function setup() {
   var canvas = $('canvas');
 
-  var FOGCOLOR = 0x112244;
+  var FOGCOLOR = 0x42bcf4;
   var SHININESS = 30;
 
   var lot = 'triangle';
@@ -50,6 +52,17 @@ function setup() {
   var renderer, camera, controls, scene;
   var default_material, wire_material;
 
+  var grid_size = 100;
+  var grid_divisions = 100;
+  var gridHelper = new THREE.GridHelper( grid_size, grid_divisions );
+  var axisHelper = new THREE.AxisHelper();
+  axisHelper.position.x += 3;
+
+  var showGrid = false;
+
+  var examples = {};
+
+
   $('.lot-selector').addEventListener('change', e => {
     lot=e.target.value;
     update();
@@ -57,11 +70,16 @@ function setup() {
 
   $('#updateBtn').addEventListener('click', update);
 
-  Object.keys(examples).forEach(e => $('.example-selector').appendChild( $.create('option', null, e) ) );
   $('.example-selector').addEventListener('change', e => {
     if (!e.target.value) return;
-    $('textarea').value = examples[e.target.value];
-    parse();
+
+    function set(val) {
+      examples[e.target.value] = val;
+      $('textarea').value = val;
+      parse();
+    }
+    if (examples[e.target.value]) set(examples[e.target.value]);
+    else $.get('examples/'+e.target.value+'.cga', set);
   });
 
   var grammarText = localStorage.getItem('grammar');
@@ -76,14 +94,28 @@ function setup() {
 
   render();
 
-
   window.addEventListener( 'resize', onWindowResize, false );
 
   $('textarea').addEventListener('keyup', parse);
 
   $('canvas').addEventListener('keydown', e => { console.log(e); if (e.key==' ') controls.autoRotate = !controls.autoRotate; });
 
+  $('.grid-checkbox').addEventListener('change', e => toggleGrid($('.grid-checkbox').checked) );
 
+
+  function toggleGrid(val) {
+
+    if (val) {
+      scene.add(gridHelper);
+      scene.add(axisHelper);
+      showGrid = true;
+    } else {
+      scene.remove(gridHelper);
+      scene.remove(axisHelper);
+      showGrid = false;
+    }
+    update();
+  }
 
   function setupThreejs() {
     camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 0.1, 1000 );
@@ -93,7 +125,7 @@ function setup() {
     camera.aspect = canvas.clientWidth / canvas.clientHeight;
 
     controls = new OrbitControls( camera, canvas );
-    controls.autoRotate = true;
+    controls.autoRotate = false;
     controls.enableZoom = true;
     controls.maxPolarAngle = Math.PI/2-0.01;
 
@@ -126,14 +158,6 @@ function setup() {
     ground.position.y = -0.01;
     ground.scale.set(100,100,100);
     scene.add(ground);
-
-    var size = 100;
-    var divisions = 100;
-
-    scene.add(new THREE.GridHelper( size, divisions ));
-    var axisHelper = new THREE.AxisHelper();
-    axisHelper.position.x += 3;
-    scene.add(axisHelper);
 
 
     //Create a DirectionalLight and turn on shadows for the light
@@ -328,9 +352,11 @@ function setup() {
         mesh.castShadow = true;
         group.add(mesh);
 
-        var wireframe = new THREE.LineSegments( new THREE.EdgesGeometry(r), wire_material );
-        //var wireframe = new THREE.LineSegments( new THREE.WireframeGeometry(r), wire_material );
-        group.add( wireframe );
+        if (showGrid) {
+          var wireframe = new THREE.LineSegments( new THREE.EdgesGeometry(r), wire_material );
+          //var wireframe = new THREE.LineSegments( new THREE.WireframeGeometry(r), wire_material );
+          group.add( wireframe );
+        }
 
       });
     });

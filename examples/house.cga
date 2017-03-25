@@ -1,0 +1,17 @@
+Lot --> extrude(rand(0.8, 2)) comp(f) { front: Front | side: Side | top: Roof |  bottom: B }
+
+Roof -->  color("red") t('-0.05, 0, '0.05) s('1.1, '1, '1.1) taper(1) split(y) { 'rand(0.1, 1) : R }
+
+Front --> extrude(0.001) split(x) { ~0.3: Side | 0.6 : DoorWall | ~0.3: Side }
+
+TopWall --> color("white")
+
+DoorWall --> split(y) { 0.6: Door | ~0.2 : TopWall }
+
+Door --> color("grey") t(0,0,0.02)
+
+Side --> color("white") split(x) { '0.3: W | ~0.3 : WindowWall | '0.3 : Wall }*
+
+WindowWall --> split(y) { '0.5 : Wall | '0.2 : Window | ~1 : Wall }
+
+Window --> color("lightblue")
