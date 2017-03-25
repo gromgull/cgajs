@@ -196,11 +196,32 @@ function func_taper(processor, amount) {
 
 
 function func_scale(processor, x,y,z) {
+
+  var size = processor.size();
+
+  if (x instanceof cga.Relative) x = x.value;
+  else x = x/size.x;
+
+  if (y instanceof cga.Relative) y = y.value;
+  else y = y/size.y;
+
+  if (z instanceof cga.Relative) z = z.value;
+  else z = z/size.z;
+
   // this gets relative objects
-  processor.top.scale(x.value, y.value, z.value);
+  processor.top.scale(x, y, z);
 }
 
 function func_translate(processor, x,y,z) {
+
+  var size = processor.size();
+
+  if (x instanceof cga.Relative) x = x.value * size.x;
+
+  if (y instanceof cga.Relative) y = y.value * size.y;
+
+  if (z instanceof cga.Relative) z = z.value * size.z;
+
   processor.top.translate(x,y,z);
 }
 
@@ -268,8 +289,7 @@ function func_split(processor, axis, body) {
 
   if ('xyz'.indexOf(axis.value)==-1) throw 'Illegal split-axis: {axis}, can only split by x, y or z'.format({axis:axis});
 
-  processor.top.computeBoundingBox();
-  var size = processor.top.boundingBox.max[axis.value]-processor.top.boundingBox.min[axis.value];
+  var size = processor.size()[axis.value];
 
   var parts = body.parts;
   total = 0;
@@ -412,6 +432,10 @@ function isRelative(val) {
   return val instanceof cga.Relative;
 }
 
+function isNumericOrRelative(val) {
+  return isNumeric(val) || isRelative(val);
+}
+
 
 function isFloating(val) {
   isFloating.type = 'floating';
@@ -499,9 +523,9 @@ function register_func(name, min_params, max_params, validator, hasBody, func) {
 }
 
 
-register_func('s', 3, 3, isRelative, false, func_scale);
+register_func('s', 3, 3, isNumericOrRelative, false, func_scale);
 register_func('r', 3, 3, isNumeric, false, func_rotate);
-register_func('t', 3, 3, isNumeric, false, func_translate);
+register_func('t', 3, 3, isNumericOrRelative, false, func_translate);
 register_func('extrude', 1, 1, isNumeric, false, func_extrude);
 register_func('taper', 1, 1, isNumeric, false, func_taper);
 register_func('rand', 0, 2, isNumeric, false, func_rand);
@@ -546,6 +570,11 @@ Processor.prototype.set_attrs = function (geom) {
 
   geom.attrs = clone_obj(this.top.attrs);
   return geom;
+};
+
+Processor.prototype.size = function () {
+  this.top.computeBoundingBox();
+  return this.top.boundingBox.max.clone().sub(this.top.boundingBox.min);
 };
 
 // replace the top of the stack with this geo
