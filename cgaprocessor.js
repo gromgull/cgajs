@@ -31,6 +31,7 @@ function split_geometry(axis, geometry, left, right) {
   _g = new THREEBSP(geometry);
 
   var bb = geometry.boundingBox.max.clone().sub(geometry.boundingBox.min);
+  bb.max( new THREE.Vector3( 0.01, 0.01, 0.01 ));
 
   if (left > bb[axis]) return new THREE.Geometry(); // empty
 
