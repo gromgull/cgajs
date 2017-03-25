@@ -145,10 +145,18 @@ function setup() {
 
     scene.add( light );
 
+    light = new THREE.DirectionalLight( 0xffffff, 0.3, 100 );
+    light.position.set( 0, 2, -3);
+
+    light.castShadow = true;            // default false
+
+
+    scene.add( light );
+
+
     //Create a DirectionalLight and turn on shadows for the light
     light = new THREE.DirectionalLight( 0xffffff, 0.3, 100 );
-    light.position.set( -2, 1, -4);
-
+    light.position.set( -3, 1, 0);
     light.castShadow = true;            // default false
 
 
