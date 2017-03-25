@@ -86,6 +86,8 @@ function func_extrude(processor, amount) {
 
   var hard_edges = find_hard_edges(processor.top);
 
+  processor.top.computeFaceNormals();
+
   processor.top.faces.forEach(f => {
     var l = geometry.vertices.length;
 
@@ -125,8 +127,12 @@ function func_extrude(processor, amount) {
 
 
   });
+
+
+  geometry.mergeVertices();
+
   console.log("From {v}/{f} vertices/faces, extruded {nv}/{nf}".format({v: processor.top.vertices.length, f: processor.top.faces.length,
-                                                                        nv: geometry.vertices.length, nf: geometry.vertices.length }));
+                                                                        nv: geometry.vertices.length, nf: geometry.faces.length }));
 
   processor.update( geometry );
 
@@ -503,6 +509,33 @@ Processor.prototype.update = function (g) {
 };
 
 Processor.prototype.process = function(lot) {
+
+  var object_cs_origin = lot.vertices[0];
+
+  if (!lot.faces[0].a === 0) throw "I assume the first face uses the first vertex!" // TODO
+  var object_x = lot.vertices[lot.faces[0].b].clone().sub(lot.vertices[0]).normalize();
+  console.log('objx', object_x);
+  var quat = new THREE.Quaternion();
+  quat.setFromUnitVectors(new THREE.Vector3(1,0,0), object_x);
+
+  var world = new THREE.Matrix4();
+  world.makeRotationFromQuaternion(quat);
+  world.setPosition( object_cs_origin );
+
+  var inverse_world = new THREE.Matrix4();
+  inverse_world.getInverse(world, true);
+
+  function _v(v) { return '('+v.x.toFixed(3)+', '+v.y.toFixed(3)+', '+v.z.toFixed(3)+')'; }
+
+  console.log('world', _v(lot.vertices[0]), _v(lot.vertices[1]), lot.vertices[0].clone().sub(lot.vertices[1]).length());
+
+  lot.applyMatrix(world);
+  //lot.rotateY(Math.PI/2);
+
+  lot.computeFaceNormals();
+
+  console.log('obj', _v(lot.vertices[0]), _v(lot.vertices[1]), lot.vertices[0].clone().sub(lot.vertices[1]).length());
+
   this.stack = [lot];
 
   this.res = [];
@@ -519,6 +552,13 @@ Processor.prototype.process = function(lot) {
   }
 
   traverse(this.res);
+
+  //flat.forEach( geo => { geo.mergeVertices(); geo.rotateY(-Math.PI/2) } );
+  flat.forEach( geo => {
+    geo.computeFaceNormals();
+    geo.computeVertexNormals();
+    geo.applyMatrix( inverse_world );
+  });
 
   return flat;
 
