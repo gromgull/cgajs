@@ -236,12 +236,20 @@ function setup() {
 
   }
 
+  function random_lot() {
+    switch(Math.floor(Math.random()*3)) {
+      case 0: return triangle_lot();
+      case 1: return square_lot();
+      case 2: return circle_lot();
+    }
+  }
+
   function update() {
     var lotGeom;
 
     if ( lot == 'triangle') {
       lotGeom = triangle_lot();
-    } if ( lot == 'circle' ) {
+    } else if ( lot == 'circle' ) {
       lotGeom = circle_lot();
     } else if ( lot == 'square' ) {
 
@@ -269,7 +277,16 @@ function setup() {
         for (var j = -1; j<2; j++ )
           lotGeom.push( square_lot().rotateY(Math.floor(Math.random()*4)*Math.PI/2).translate(i*3, 0, j*3) );
 
-    }
+    } else if (lot == '25random') {
+
+      lotGeom = [];
+
+      for (var i = -2; i<3; i++ )
+        for (var j = -2; j<3; j++ )
+          lotGeom.push( random_lot().rotateY(Math.random()*2*Math.PI).translate(i*3+Math.random()-0.5, 0, j*3+Math.random()-0.5) );
+
+    } else throw 'Unknown lot type: '+lot;
+
     if (!(lotGeom instanceof Array)) lotGeom = [lotGeom];
 
     for( var i = group.children.length - 1; i >= 0; i--) {
