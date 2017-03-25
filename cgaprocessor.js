@@ -82,8 +82,7 @@ function split_geometry(axis, geometry, left, right) {
 
 function func_extrude(processor, amount) {
 
-  var geometry = new THREE.Geometry();
-  geometry.attrs = clone_obj(processor.top.attrs);
+  var geometry = processor.create();
 
   var hard_edges = find_hard_edges(processor.top);
 
@@ -135,8 +134,7 @@ function func_extrude(processor, amount) {
 
 function func_taper(processor, amount) {
 
-  geometry = new THREE.Geometry();
-  geometry.attrs = clone_obj(processor.top.attrs);
+  var geometry = processor.create();
 
   var hard_edges = find_hard_edges(processor.top);
 
@@ -274,7 +272,7 @@ function func_split(processor, axis, body) {
   var left = 0;
   splits.forEach( (s,i) => {
     var geom = split_geometry(axis.value, processor.top, left, left+s);
-    geom.attrs = clone_obj(processor.top.attrs);
+    processor.set_attrs(geom); // color, pivot ++
     processor.stack.push(geom);
     processor.applyOperations(sizes[i%sizes.length].operations);
     processor.stack.pop();
@@ -321,7 +319,7 @@ function func_comp(processor, selector, body) {
     if (p.op != ':' ) throw 'Illegal split operator, must be : was "{op}"'.format(p);
 
     if (parts[p.head.name]) {
-      var g = new THREE.Geometry();
+      var g = processor.create();
       parts[p.head.name].forEach( f => {
         var l = g.vertices.length;
         g.vertices.push(processor.top.vertices[f.a]);
@@ -487,6 +485,15 @@ Processor.prototype = {
     if (!this.stack.length) return;
     return peek(this.stack);
   }
+};
+
+Processor.prototype.create = function() {
+  return this.set_attrs(new THREE.Geometry());
+};
+
+Processor.prototype.set_attrs = function (geom) {
+  geom.attrs = clone_obj(this.top.attrs);
+  return geom;
 };
 
 // replace the top of the stack with this geo
