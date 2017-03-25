@@ -130,8 +130,10 @@ function setup() {
     var size = 100;
     var divisions = 100;
 
-    var gridHelper = new THREE.GridHelper( size, divisions );
-    scene.add( gridHelper );
+    scene.add(new THREE.GridHelper( size, divisions ));
+    var axisHelper = new THREE.AxisHelper();
+    axisHelper.position.x += 3;
+    scene.add(axisHelper);
 
 
     //Create a DirectionalLight and turn on shadows for the light
@@ -201,24 +203,28 @@ function setup() {
       lotGeom.vertices.push( new THREE.Vector3(  0, 0, -h/2 ) );
       lotGeom.vertices.push( new THREE.Vector3(  1, 0,  h/2 ) );
 
-
       lotGeom.faces.push( new THREE.Face3( 0, 2, 1 ) );
     } else if ( lot == 'square' ) {
+
+      lotGeom.vertices.push( new THREE.Vector3(  -1, 0, 1 ) );
+      lotGeom.vertices.push( new THREE.Vector3(  1, 0, 1 ) );
+
       lotGeom.vertices.push( new THREE.Vector3( -1, 0, -1 ) );
       lotGeom.vertices.push( new THREE.Vector3(  1, 0, -1 ) );
-      lotGeom.vertices.push( new THREE.Vector3(  1, 0, 1 ) );
-      lotGeom.vertices.push( new THREE.Vector3(  -1, 0, 1 ) );
 
-      lotGeom.faces.push( new THREE.Face3( 0, 2, 1 ) );
-      lotGeom.faces.push( new THREE.Face3( 2, 0, 3 ) );
+
+      lotGeom.faces.push( new THREE.Face3( 0, 1, 2 ) );
+      lotGeom.faces.push( new THREE.Face3( 2, 1, 3 ) );
     } else if (lot == 'rectangle') {
+
+      lotGeom.vertices.push( new THREE.Vector3(  -1.5, 0, 1 ) );
+      lotGeom.vertices.push( new THREE.Vector3(  1.5, 0, 1 ) );
+
       lotGeom.vertices.push( new THREE.Vector3( -1.5, 0, -1 ) );
       lotGeom.vertices.push( new THREE.Vector3(  1.5, 0, -1 ) );
-      lotGeom.vertices.push( new THREE.Vector3(  1.5, 0, 1 ) );
-      lotGeom.vertices.push( new THREE.Vector3(  -1.5, 0, 1 ) );
 
-      lotGeom.faces.push( new THREE.Face3( 0, 2, 1 ) );
-      lotGeom.faces.push( new THREE.Face3( 2, 0, 3 ) );
+      lotGeom.faces.push( new THREE.Face3( 0, 1, 2 ) );
+      lotGeom.faces.push( new THREE.Face3( 2, 1, 3 ) );
 
     }
     lotGeom.computeFaceNormals();
