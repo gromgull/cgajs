@@ -194,10 +194,25 @@ function setup() {
     }
   }
 
+  function square_lot() {
+    lotGeom = new THREE.Geometry();
+    lotGeom.vertices.push( new THREE.Vector3(  -1, 0, 1 ) );
+    lotGeom.vertices.push( new THREE.Vector3(  1, 0, 1 ) );
+
+    lotGeom.vertices.push( new THREE.Vector3( -1, 0, -1 ) );
+    lotGeom.vertices.push( new THREE.Vector3(  1, 0, -1 ) );
+
+    lotGeom.faces.push( new THREE.Face3( 0, 1, 2 ) );
+    lotGeom.faces.push( new THREE.Face3( 2, 1, 3 ) );
+
+    return lotGeom;
+  }
+
   function update() {
-    var lotGeom = new THREE.Geometry();
+    var lotGeom;
 
     if ( lot == 'triangle') {
+      lotGeom = new THREE.Geometry();
       var h = Math.sqrt(3);
       lotGeom.vertices.push( new THREE.Vector3( -1, 0,  h/2 ) );
       lotGeom.vertices.push( new THREE.Vector3(  0, 0, -h/2 ) );
@@ -206,29 +221,32 @@ function setup() {
       lotGeom.faces.push( new THREE.Face3( 0, 2, 1 ) );
     } else if ( lot == 'square' ) {
 
-      lotGeom.vertices.push( new THREE.Vector3(  -1, 0, 1 ) );
-      lotGeom.vertices.push( new THREE.Vector3(  1, 0, 1 ) );
+      lotGeom = square_lot();
 
-      lotGeom.vertices.push( new THREE.Vector3( -1, 0, -1 ) );
-      lotGeom.vertices.push( new THREE.Vector3(  1, 0, -1 ) );
-
-
-      lotGeom.faces.push( new THREE.Face3( 0, 1, 2 ) );
-      lotGeom.faces.push( new THREE.Face3( 2, 1, 3 ) );
     } else if (lot == 'rectangle') {
 
-      lotGeom.vertices.push( new THREE.Vector3(  -1.5, 0, 1 ) );
-      lotGeom.vertices.push( new THREE.Vector3(  1.5, 0, 1 ) );
+      lotGeom = square_lot().scale(1.5, 1, 1);
 
-      lotGeom.vertices.push( new THREE.Vector3( -1.5, 0, -1 ) );
-      lotGeom.vertices.push( new THREE.Vector3(  1.5, 0, -1 ) );
+    } else if (lot == '4squares') {
 
-      lotGeom.faces.push( new THREE.Face3( 0, 1, 2 ) );
-      lotGeom.faces.push( new THREE.Face3( 2, 1, 3 ) );
+      lotGeom = [];
+
+      lotGeom.push( square_lot() );
+      lotGeom.push( square_lot().rotateY(-Math.PI/2).translate(-3, 0, 0) );
+      lotGeom.push( square_lot().rotateY(Math.PI/2).translate(0, 0, 3) );
+      lotGeom.push( square_lot().rotateY(Math.PI).translate(-3, 0, 3) );
+
+
+    } else if (lot == '9squares') {
+
+      lotGeom = [];
+
+      for (var i = -1; i<2; i++ )
+        for (var j = -1; j<2; j++ )
+          lotGeom.push( square_lot().rotateY(Math.floor(Math.random()*4)*Math.PI/2).translate(i*3, 0, j*3) );
 
     }
-    lotGeom.computeFaceNormals();
-    lotGeom.computeVertexNormals();
+    if (!(lotGeom instanceof Array)) lotGeom = [lotGeom];
 
     for( var i = group.children.length - 1; i >= 0; i--) {
       var e = group.children[i];
@@ -238,28 +256,34 @@ function setup() {
     }
 
     var proc = new cgaprocessor.Processor(grammar);
-    var res = proc.process(lotGeom);
-    console.log(res);
+    lotGeom.forEach(g => {
 
-    res.forEach(r => {
-      r.computeFaceNormals();
-      r.computeVertexNormals();
+      g.computeFaceNormals();
+      g.computeVertexNormals();
 
-      var material = default_material;
+      var res = proc.process(g);
+      console.log(res);
 
-      var attrs = r.attrs;
-      if ( attrs && attrs.material && attrs.material.color )
-        material = new THREE.MeshLambertMaterial({ shininess: default_material.shininess,
-                                                 color: attrs.material.color });
+      res.forEach(r => {
+        r.computeFaceNormals();
+        r.computeVertexNormals();
 
-      var mesh = new THREE.Mesh(new THREE.BufferGeometry().fromGeometry(r), material);
-      mesh.castShadow = true;
-      group.add(mesh);
+        var material = default_material;
 
-      var wireframe = new THREE.LineSegments( new THREE.EdgesGeometry(r), wire_material );
-      //var wireframe = new THREE.LineSegments( new THREE.WireframeGeometry(r), wire_material );
-      group.add( wireframe );
+        var attrs = r.attrs;
+        if ( attrs && attrs.material && attrs.material.color )
+          material = new THREE.MeshLambertMaterial({ shininess: default_material.shininess,
+                                                     color: attrs.material.color });
 
+        var mesh = new THREE.Mesh(new THREE.BufferGeometry().fromGeometry(r), material);
+        mesh.castShadow = true;
+        group.add(mesh);
+
+        var wireframe = new THREE.LineSegments( new THREE.EdgesGeometry(r), wire_material );
+        //var wireframe = new THREE.LineSegments( new THREE.WireframeGeometry(r), wire_material );
+        group.add( wireframe );
+
+      });
     });
 
   }
