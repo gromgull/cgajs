@@ -39,3 +39,5 @@ t('Lot --> set(material.color, "red")');
 t('Lot --> set(material.color, "red")');
 
 t('Lot --> [ t(1,0,1) Box ] [ t(-1,0,1) Box ] [ t(1,0,-1) Box ]');
+
+t('Lot --> primitiveCube()');

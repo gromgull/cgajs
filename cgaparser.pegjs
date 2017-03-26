@@ -32,13 +32,13 @@ ident = $([a-zA-Z][a-zA-Z0-9]*)
 comment
   = "/*" [^*]* "*"+ ([^/*] [^*]* "*"+)* "/"
 
-func = name:ident params:( "(" _
+func = name:ident params:( "(" _ params:(
       head:func_expr
-      tail:(comma v:expr { return v; })* _ ")"
-      { return [head].concat(tail); }  )? _
+      tail:(comma v:expr { return v; })* { return [head].concat(tail); } )? _ ")"
+      { return params; } )? _
       body:block?
 
-      { return new cga.Function(name, params, body ); }
+      { return new cga.Function(name, params || [], body ); }
 
 block = "{" body:( head:block_op tail:(pipe v:block_op { return v; } )* { return [head].concat(tail); } ) "}" repeat:"*"? { return new cga.Body(body, repeat); }
 
