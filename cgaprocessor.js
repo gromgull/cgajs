@@ -414,6 +414,17 @@ function func_color(processor, val) {
   func_set(processor, new cga.AttrRef('material', 'color'), val);
 }
 
+function func_stack(processor, body) {
+
+  var g = processor.top.clone();
+  processor.set_attrs(g);
+
+  processor.stack.push(g);
+  processor.applyOperations(body);
+  processor.stack.pop();
+
+}
+
 var FUNCTIONS = { };
 
 
@@ -469,6 +480,8 @@ function isString(val) {
   return typeof val == 'string';
 }
 
+function isAnything(_) { return true; }
+
 function eval_expr(processor, expr) {
   if ((typeof expr) == 'string') return expr;
   if (isAttrRef(expr)) return expr; // hmm
@@ -513,7 +526,7 @@ function register_func(name, min_params, max_params, validator, hasBody, func) {
           throw 'Function {name} requires {type} parameters, param {i} was {t}'.format({name:name, type: validator.type, i: i, t: typeof p});
       });
     else
-      if (!params.every( validator ))
+      if (!params.every( validator || (x=>true) ))
         throw 'Function {name} requires {type} parameters'.format({name:name, type: validator.type});
 
 
@@ -534,6 +547,9 @@ register_func('color', 1, 1, isString, false, func_color);
 
 register_func('split', 1, 1, isAxis, true, func_split);
 register_func('comp', 1, 1, isCompSelector, true, func_comp);
+
+register_func('__stack__', 0, 0, null, true, func_stack);
+
 
 function Processor(grammar) {
   this.data = {};

@@ -55,5 +55,9 @@ string = "\"" t:([^"]*{ return text(); })  "\"" { return t; }
 
 attr = "attr" ws variable:ident _ "=" _ value:literal _ { var res = {}; res[variable] = value; return res; }
 
+stack = "[" e:( _ e:expr _ { return e; } )* "]" { return new cga.Function('__stack__', [], e); }
+
+rule_body = stack / expr
+
 // ( "(" ident ( "," ident ) * ")" ) ?
-rule = name:ident  _ arrow successors:((_ e:expr _ !arrow { return e } ) *) { return new cga.Rule( name, successors ); }
+rule = name:ident  _ arrow successors:((_ e:rule_body _ !arrow { return e } ) *) { return new cga.Rule( name, successors ); }
