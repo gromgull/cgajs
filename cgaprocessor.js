@@ -425,6 +425,97 @@ function func_stack(processor, body) {
 
 }
 
+function func_cube(processor, w, h, d) {
+  if ([w,h,d].some( e => e === undefined ) && ![w,h,d].every( e => e === undefined )) throw 'Specify either all or no dimensions!';
+
+  var top = processor.top;
+  top.computeBoundingBox();
+
+  var c = top.boundingBox.getCenter();
+  var size;
+  if ( w===undefined ) {
+    size = processor.size();
+    if (!size.lengthManhattan()) throw 'Zero size scope for insert primitive!';
+    if (!size.y) size.y = (size.x+size.z)/2;
+
+  } else {
+    size = { x:w, y:h, z:d };
+    c.y = size.y/2;
+  }
+
+  var g = new THREE.BoxGeometry(size.x, size.y, size.z);
+
+  g.translate(c.x, c.y, c.z);
+
+  processor.set_attrs(g);
+
+  processor.update(g);
+
+}
+
+function func_sphere(processor, xd, yd, r) {
+
+  var top = processor.top;
+  top.computeBoundingBox();
+
+  if (!xd) xd = 16;
+  if (!yd) yd = 16;
+
+  var c = top.boundingBox.getCenter();
+  var size;
+  if ( r===undefined ) {
+    size = processor.size();
+    if (!size.lengthManhattan()) throw 'Zero size scope for insert primitive!';
+    if (!size.y) size.y = (size.x+size.z)/2;
+    r = 0.5;
+  } else {
+    c.y = r;
+  }
+
+  var g = new THREE.SphereGeometry(r, xd, yd);
+
+  if (size) g.scale(size.x, size.y, size.z);
+
+  g.translate(c.x, c.y, c.z);
+
+  processor.set_attrs(g);
+
+  processor.update(g);
+
+}
+
+function func_cylinder(processor, sides, r, h) {
+
+  var top = processor.top;
+  top.computeBoundingBox();
+
+  if (!sides) sides = 16;
+
+  var c = top.boundingBox.getCenter();
+  var size;
+  if ( r===undefined ) {
+    size = processor.size();
+    if (!size.lengthManhattan()) throw 'Zero size scope for insert primitive!';
+    if (!size.y) size.y = (size.x+size.z)/2;
+    r = 0.5;
+    h = 1;
+  } else {
+    c.y = h/2;
+  }
+
+  var g = new THREE.CylinderGeometry(r, r, h, sides);
+
+  if (size) g.scale(size.x, size.y, size.z);
+
+  g.translate(c.x, c.y, c.z);
+
+  processor.set_attrs(g);
+
+  processor.update(g);
+
+}
+
+
 var FUNCTIONS = { };
 
 
@@ -530,7 +621,7 @@ function register_func(name, min_params, max_params, validator, hasBody, func) {
         throw 'Function {name} requires {type} parameters'.format({name:name, type: validator.type});
 
 
-    return func.apply( null, [ processor ].concat( params, [f.body] ) );
+    return func.apply( null, [ processor ].concat( params, f.body ? [f.body] : [] ) );
 
   };
 }
@@ -539,8 +630,10 @@ function register_func(name, min_params, max_params, validator, hasBody, func) {
 register_func('s', 3, 3, isNumericOrRelative, false, func_scale);
 register_func('r', 3, 3, isNumeric, false, func_rotate);
 register_func('t', 3, 3, isNumericOrRelative, false, func_translate);
+
 register_func('extrude', 1, 1, isNumeric, false, func_extrude);
 register_func('taper', 1, 1, isNumeric, false, func_taper);
+
 register_func('rand', 0, 2, isNumeric, false, func_rand);
 register_func('set', 2, 2, [ isAttrRef, null ], false, func_set);
 register_func('color', 1, 1, isString, false, func_color);
@@ -549,6 +642,10 @@ register_func('split', 1, 1, isAxis, true, func_split);
 register_func('comp', 1, 1, isCompSelector, true, func_comp);
 
 register_func('__stack__', 0, 0, null, true, func_stack);
+
+register_func('primitiveCube', 0, 3, isNumeric, false, func_cube);
+register_func('primitiveSphere', 0, 3, isNumeric, false, func_sphere);
+register_func('primitiveCylinder', 0, 3, isNumeric, false, func_cylinder);
 
 
 function Processor(grammar) {
@@ -651,12 +748,9 @@ Processor.prototype.applyFunction = function(func) {
     if (FUNCTIONS[func.name]) {
       return FUNCTIONS[func.name](this, func);
     } else {
-      if (func.params === null) {
-        console.log('applying', func.name);
-        return this.applyRule(this.rules[func.name]);
-      }
+      console.log('applying', func.name);
+      return this.applyRule(this.rules[func.name]);
     }
-    throw 'Unknown function: '+func.name;
   };
 
 
