@@ -359,7 +359,9 @@ function func_comp(processor, selector, body) {
 
     var ops = [ parts[p.head.name] ];
 
-    if (p.head.name == 'side') ops = [ parts.left, parts.right, parts.back ];
+    if (p.head.name == 'side') ops = [ parts.front, parts.left, parts.right, parts.back ];
+    if (p.head.name == 'all') ops = [ parts.top, parts.bottom, parts.front, parts.left, parts.right, parts.back ];
+
 
     ops.forEach(part => {
       if (part) {
