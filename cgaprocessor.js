@@ -744,12 +744,32 @@ Processor.prototype.process = function(lot) {
 
 };
 
+Processor.prototype.applyStochastic = function(rule) {
+
+  var total = rule.parts.reduce((a,p) => p.pct != 'else' ? a+p.pct : a , 0);
+  if (total>100) throw 'Sum of percentages in stochastic rule are >100, was: '+total;
+
+  var otherwise = 100 - total;
+  var r = Math.random()*100;
+  var k = 0;
+  var p;
+  for (var i=0; i<rule.parts.length; i++) {
+    p = rule.parts[i];
+    if (r<k+p.pct) break;
+    k += p.pct;
+  }
+
+  console.log('r = {r}, picked option {i}'.format({r:r, i:i}));
+
+  this.applyOperations(p.body);
+};
+
 Processor.prototype.applyFunction = function(func) {
-    if (FUNCTIONS[func.name]) {
-      return FUNCTIONS[func.name](this, func);
+  if (FUNCTIONS[func.name]) {
+      FUNCTIONS[func.name](this, func);
     } else {
       console.log('applying', func.name);
-      return this.applyRule(this.rules[func.name]);
+      this.applyRule(this.rules[func.name]);
     }
   };
 
@@ -777,7 +797,13 @@ Processor.prototype.applyRule = function(rule) {
     // nil rule
     this.res.push(null);
   } else if (rule instanceof cga.Rule) {
-    this.applyOperations(rule.successors);
+
+    if (rule.successors instanceof cga.Stochastic) {
+      this.applyStochastic(rule.successors);
+    } else {
+      this.applyOperations(rule.successors);
+    }
+
   } else {
     throw "Unknown rule type: "+typeof rule;
   }
