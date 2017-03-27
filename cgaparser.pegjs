@@ -4,7 +4,9 @@
 start = _ attrs:(attr *) rules:(rule *) _ { return new cga.CGA(attrs!==null && attrs.length ? Object.assign.apply({},attrs) : {}, rules); }
 
 _ = [ \t\r\n]*
-ws = [ \t]
+ws = [ \t]*
+indent = [ \t]+ { return text(); }
+
 nl = "\n"
 
 int = "-"?[0-9]+ { return parseInt(text()) }
@@ -32,17 +34,20 @@ ident = $([a-zA-Z][a-zA-Z0-9]*)
 comment
   = "/*" [^*]* "*"+ ([^/*] [^*]* "*"+)* "/"
 
-func = name:ident params:( "(" _ params:(
+pct = val:literal "%" { return val; }
+
+else = "else"
+
+func = name:ident args:( "(" _ params:(
       head:func_expr
       tail:(comma v:expr { return v; })* { return [head].concat(tail); } )? _ ")"
-      { return params; } )? _
-      body:block?
+      body:block? { return { params:params, body: body }; } )?
 
-      { return new cga.Function(name, params || [], body ); }
+      { return new cga.Function(name, args && args.params || [], args && args.body || null); }
 
-block = "{" body:( head:block_op tail:(pipe v:block_op { return v; } )* { return [head].concat(tail); } ) "}" repeat:"*"? { return new cga.Body(body, repeat); }
+block = ws "{" body:( head:block_op tail:(pipe v:block_op { return v; } )* { return [head].concat(tail); } ) "}" repeat:"*"? { return new cga.Body(body, repeat); }
 
-block_op = _ head:expr _ op:(colon/equals) _ operations:expr* _ { return new cga.OpBlock(head, op, operations); }
+block_op = _ head:expr _ op:(colon/equals) _ operations:operations _ { return new cga.OpBlock(head, op, operations); }
 
 func_expr = axis / comp_selector / expr
 body_expr = _ p:(colon / pipe / expr) _ { return p; }
@@ -57,7 +62,18 @@ attr = "attr" ws variable:ident _ "=" _ value:literal _ { var res = {}; res[vari
 
 stack = "[" e:( _ e:expr _ { return e; } )* "]" { return new cga.Function('__stack__', [], e); }
 
-rule_body = stack / expr
+pctblock = pct:pct ws colon ws body:stochasticoperations { return { pct: pct, body: body }; }
+
+stochastic = ws nl indent:indent head:pctblock
+           tail:(nl indentother:indent & { return indent == indentother; } b:pctblock { return b; } )*
+           nl indentelse:indent & { return indent == indentelse; } else_:( else ws colon ws body:stochasticoperations { return { pct: 'else', body: body }; } ) { return new cga.Stochastic([head].concat(tail, [else_])) ; }
+
+// no nl as whitespace
+stochasticoperation = stack / func
+stochasticoperations = (e:operation ws !arrow !else { return e; } )+
+
+operation = stack / func
+operations = (_ e:operation _ !arrow !else { return e; } ) *
 
 // ( "(" ident ( "," ident ) * ")" ) ?
-rule = name:ident  _ arrow successors:((_ e:rule_body _ !arrow { return e } ) *) { return new cga.Rule( name, successors ); }
+rule = _ name:ident  _ arrow successors:(stochastic / operations ) { return new cga.Rule( name, successors ); }

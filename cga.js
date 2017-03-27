@@ -15,8 +15,15 @@ function Rule(name, successors) {
 }
 
 Rule.prototype.toString = function() {
-  return 'Rule( {name}, {successors} )'.format( { name: this.name, successors: this.successors.map(JSON.stringify) });
+  return 'Rule( {name}, {successors} )'.format( { name: this.name,
+                                                  successors: this.successors instanceof Array ? this.successors.map(JSON.stringify) : this.successors});
 };
+
+function Stochastic(parts) { this.parts = parts; }
+Stochastic.prototype.toString = function() {
+  return 'Stochastic({parts})'.format(this);
+};
+
 
 function Relative(value) { this.value = value; }
 Relative.prototype.toString = function() {
@@ -73,4 +80,5 @@ module.exports = {
   Axis: Axis,
   AttrRef: AttrRef,
   CompSelector: CompSelector,
+  Stochastic: Stochastic,
 };
