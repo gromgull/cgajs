@@ -408,11 +408,15 @@ function func_set(processor, attr, val) {
   if (!processor.top.attrs) processor.top.attrs = {};
   if (!processor.top.attrs[attr.obj]) processor.top.attrs[attr.obj] = {};
 
-  if (val.indexOf('0x') === 0) val = parseInt(val, 16);
+  if (isString(val) && val.indexOf('0x') === 0) val = parseInt(val, 16);
   processor.top.attrs[attr.obj][attr.field] = val;
 }
 
-function func_color(processor, val) {
+function func_color(processor, val, g, b) {
+  if ( g !== undefined ) {
+    val = 256*256*Math.floor(val) + 256*Math.floor(g) + Math.floor(b);
+    console.log(val.toString(16));
+  }
   func_set(processor, new cga.AttrRef('material', 'color'), val);
 }
 
@@ -573,6 +577,11 @@ function isString(val) {
   return typeof val == 'string';
 }
 
+function isStringOrNumeric(val) {
+  return isString(val) || isNumeric(val);
+}
+
+
 function isAnything(_) { return true; }
 
 function eval_expr(processor, expr) {
@@ -638,7 +647,7 @@ register_func('taper', 1, 1, isNumeric, false, func_taper);
 
 register_func('rand', 0, 2, isNumeric, false, func_rand);
 register_func('set', 2, 2, [ isAttrRef, null ], false, func_set);
-register_func('color', 1, 1, isString, false, func_color);
+register_func('color', 1, 3, [ isStringOrNumeric, isNumeric, isNumeric ], false, func_color);
 
 register_func('split', 1, 1, isAxis, true, func_split);
 register_func('comp', 1, 1, isCompSelector, true, func_comp);
