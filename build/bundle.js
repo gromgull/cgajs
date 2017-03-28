@@ -46043,6 +46043,117 @@ function split_array(a, sep) {
 }
 
 function split_geometry(axis, geometry, left, right) {
+  if (!geometry.faces.length) return geometry;
+
+  geometry.computeBoundingBox();
+  var bb = geometry.boundingBox.max.clone().sub(geometry.boundingBox.min);
+  if (bb.x < 0.0001 || bb.y < 0.0001 || bb.z < 0.0001 ) return split_flat_geometry(axis, geometry, left, right);
+  else return split_solid_geometry(axis, geometry, left, right);
+}
+
+function split_flat_geometry(axis, geometry, left, right) {
+
+  function edgeIndex(a,b) {
+    if (a<b) return a+','+b;
+    else return b+','+a;
+  }
+
+  left += geometry.boundingBox.min[axis];
+  right += geometry.boundingBox.min[axis];
+
+  function doSide(limit, sign) {
+
+    var vertices = []; // -1 lhs, 0 on, 1 rhs
+    var edgeVerticesMap = [];
+    var splitvertices = [];
+    res = new THREE.Geometry();
+
+    function addFace(v1,v2,v3) {
+      var l = res.vertices.length;
+      res.vertices.push(v1, v2, v3);
+      res.faces.push(new THREE.Face3(l, l+1, l+2));
+    }
+
+
+    function doEdge(a,b) {
+      // return 1 if both vertices should be discarded edge, 0 if we keep one, -1 if we keep both
+
+      var idx = edgeIndex(a,b);
+
+      var as = sign*vertices[a];
+      var bs = sign*vertices[b];
+
+      var r = ( as == bs) ? as : 0;
+
+      var av = geometry.vertices[a];
+      var bv = geometry.vertices[b];
+
+      if (!r) {
+        if ( as > 0) {
+          console.log('a', av[axis], bv[axis], 'l', av[axis]-bv[axis], 'tolimit', av[axis]-limit, sign, (av[axis]-limit)/(av[axis]-bv[axis]));
+          av = new THREE.Vector3().lerpVectors(av, bv, (av[axis]-limit)/(av[axis]-bv[axis]));
+        }
+        if ( bs > 0) {
+          console.log('b', av[axis], bv[axis], 'l', bv[axis]-av[axis],  'tolimit', bv[axis]-limit, sign, (bv[axis]-limit)/(bv[axis]-av[axis]));
+          bv = new THREE.Vector3().lerpVectors(bv, av, (bv[axis]-limit)/(bv[axis]-av[axis]));
+        }
+      }
+
+      if (r>0)
+        edgeVerticesMap[idx] = null;
+      else
+        edgeVerticesMap[idx] = { a: av, b: bv };
+
+      return r;
+    }
+
+    geometry.vertices.forEach((v,i) => {
+      vertices[i] = Math.sign(v[axis]-limit);
+    });
+
+
+    geometry.faces.forEach( (f,i) => {
+      var es = [ doEdge(f.a, f.b), doEdge(f.b, f.c), doEdge(f.c, f.a) ];
+
+      if ( es.every( e => e>0 )) return; // entire face discarded
+
+      if ( es.every( e => e<0 )) return addFace(geometry.vertices[f.a], geometry.vertices[f.b], geometry.vertices[f.c]); // keep all
+
+      var faceVertices = [];
+
+      var edges = [ { a: f.a, b: f.b }, { a: f.b, b: f.c }, { a: f.c, b: f.a } ];
+
+      edges.forEach(e => {
+        var newe = edgeVerticesMap[edgeIndex(e.a, e.b)];
+        if (!newe) return;
+        if (!(faceVertices.length && faceVertices[faceVertices.length-1]==newe.a)) faceVertices.push(newe.a);
+        faceVertices.push(newe.b);
+      });
+      if (faceVertices[0] == faceVertices[faceVertices.length-1])
+        faceVertices.splice(faceVertices.length-1,1);
+
+      if (faceVertices.length==3) {
+        addFace( faceVertices[0], faceVertices[1], faceVertices[2] );
+      } else {
+        addFace( faceVertices[0], faceVertices[1], faceVertices[2] );
+        addFace( faceVertices[2], faceVertices[3], faceVertices[0] );
+      }
+
+    });
+
+    return res;
+  }
+
+  geometry = doSide(left, -1);
+  geometry.mergeVertices();
+  geometry = doSide(right, 1);
+  geometry.mergeVertices();
+
+  return geometry;
+
+}
+
+function split_solid_geometry(axis, geometry, left, right) {
 
   var leftbox, rightbox, offset;
 
@@ -46370,7 +46481,9 @@ function func_comp(processor, selector, body) {
 
     var ops = [ parts[p.head.name] ];
 
-    if (p.head.name == 'side') ops = [ parts.left, parts.right, parts.back ];
+    if (p.head.name == 'side') ops = [ parts.front, parts.left, parts.right, parts.back ];
+    if (p.head.name == 'all') ops = [ parts.top, parts.bottom, parts.front, parts.left, parts.right, parts.back ];
+
 
     ops.forEach(part => {
       if (part) {
@@ -46417,11 +46530,15 @@ function func_set(processor, attr, val) {
   if (!processor.top.attrs) processor.top.attrs = {};
   if (!processor.top.attrs[attr.obj]) processor.top.attrs[attr.obj] = {};
 
-  if (val.indexOf('0x') === 0) val = parseInt(val, 16);
+  if (isString(val) && val.indexOf('0x') === 0) val = parseInt(val, 16);
   processor.top.attrs[attr.obj][attr.field] = val;
 }
 
-function func_color(processor, val) {
+function func_color(processor, val, g, b) {
+  if ( g !== undefined ) {
+    val = 256*256*Math.floor(val) + 256*Math.floor(g) + Math.floor(b);
+    console.log(val.toString(16));
+  }
   func_set(processor, new cga.AttrRef('material', 'color'), val);
 }
 
@@ -46582,6 +46699,11 @@ function isString(val) {
   return typeof val == 'string';
 }
 
+function isStringOrNumeric(val) {
+  return isString(val) || isNumeric(val);
+}
+
+
 function isAnything(_) { return true; }
 
 function eval_expr(processor, expr) {
@@ -46647,7 +46769,7 @@ register_func('taper', 1, 1, isNumeric, false, func_taper);
 
 register_func('rand', 0, 2, isNumeric, false, func_rand);
 register_func('set', 2, 2, [ isAttrRef, null ], false, func_set);
-register_func('color', 1, 1, isString, false, func_color);
+register_func('color', 1, 3, [ isStringOrNumeric, isNumeric, isNumeric ], false, func_color);
 
 register_func('split', 1, 1, isAxis, true, func_split);
 register_func('comp', 1, 1, isCompSelector, true, func_comp);
@@ -48630,7 +48752,11 @@ function setup() {
 
   window.addEventListener( 'resize', onWindowResize, false );
 
-  $('textarea').addEventListener('keyup', parse);
+  var timeout;
+  $('textarea').addEventListener('keyup', e => {
+    if (timeout) clearTimeout(timeout);
+    timeout = setTimeout(parse, 500);
+  } );
 
   $('canvas').addEventListener('keydown', e => { console.log(e); if (e.key==' ') controls.autoRotate = !controls.autoRotate; });
 

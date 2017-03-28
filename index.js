@@ -96,7 +96,11 @@ function setup() {
 
   window.addEventListener( 'resize', onWindowResize, false );
 
-  $('textarea').addEventListener('keyup', parse);
+  var timeout;
+  $('textarea').addEventListener('keyup', e => {
+    if (timeout) clearTimeout(timeout);
+    timeout = setTimeout(parse, 500);
+  } );
 
   $('canvas').addEventListener('keydown', e => { console.log(e); if (e.key==' ') controls.autoRotate = !controls.autoRotate; });
 
