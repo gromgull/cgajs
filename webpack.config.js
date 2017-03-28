@@ -1,6 +1,6 @@
 module.exports = {
-  context: '.',
-  entry: './index.js',
+  context: '',
+  entry: './src/index.js',
   output: {
     filename: 'build/bundle.js',
   },

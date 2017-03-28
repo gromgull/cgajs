@@ -96,7 +96,7 @@ function func_taper(processor, amount) {
 
   var geometry = processor.create();
 
-  var hard_edges = find_hard_edges(processor.top);
+  var hard_edges = polyutils.find_hard_edges(processor.top);
 
   processor.top.computeBoundingBox();
   processor.top.computeFaceNormals();
