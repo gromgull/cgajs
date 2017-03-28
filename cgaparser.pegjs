@@ -58,7 +58,7 @@ attrref = obj:ident "." field:ident { return new cga.AttrRef(obj, field); }
 
 string = "\"" t:([^"]*{ return text(); })  "\"" { return t; }
 
-attr = "attr" ws variable:ident _ "=" _ value:literal _ { var res = {}; res[variable] = value; return res; }
+attr = "attr" ws variable:attrref _ "=" _ value:literal _ { var res = {}; variable.set(res, value); return res; }
 
 stack = "[" e:( _ e:expr _ { return e; } )* "]" { return new cga.Function('__stack__', [], e); }
 

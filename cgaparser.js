@@ -241,7 +241,7 @@ function peg$parse(input, options) {
       peg$c95 = function(t) { return t; },
       peg$c96 = "attr",
       peg$c97 = peg$literalExpectation("attr", false),
-      peg$c98 = function(variable, value) { var res = {}; res[variable] = value; return res; },
+      peg$c98 = function(variable, value) { var res = {}; variable.set(res, value); return res; },
       peg$c99 = "[",
       peg$c100 = peg$literalExpectation("[", false),
       peg$c101 = function(e) { return e; },
@@ -1758,7 +1758,7 @@ function peg$parse(input, options) {
     if (s1 !== peg$FAILED) {
       s2 = peg$parsews();
       if (s2 !== peg$FAILED) {
-        s3 = peg$parseident();
+        s3 = peg$parseattrref();
         if (s3 !== peg$FAILED) {
           s4 = peg$parse_();
           if (s4 !== peg$FAILED) {

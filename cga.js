@@ -67,6 +67,15 @@ function AttrRef(obj, field) { this.obj = obj; this.field = field; }
 AttrRef.prototype.toString = function() {
   return 'AttrRef({obj}, {field})'.format(this);
 };
+AttrRef.prototype.set = function (res, val) {
+    if (this.field) {
+      if (!res[this.obj]) res[this.obj] = {};
+      res[this.obj][this.field] = val;
+    } else {
+      res[this.obj] = val;
+    }
+};
+
 
 
 module.exports = {
