@@ -43546,6 +43546,15 @@ function AttrRef(obj, field) { this.obj = obj; this.field = field; }
 AttrRef.prototype.toString = function() {
   return 'AttrRef({obj}, {field})'.format(this);
 };
+AttrRef.prototype.set = function (res, val) {
+    if (this.field) {
+      if (!res[this.obj]) res[this.obj] = {};
+      res[this.obj][this.field] = val;
+    } else {
+      res[this.obj] = val;
+    }
+};
+
 
 
 module.exports = {
@@ -43811,7 +43820,7 @@ function peg$parse(input, options) {
       peg$c95 = function(t) { return t; },
       peg$c96 = "attr",
       peg$c97 = peg$literalExpectation("attr", false),
-      peg$c98 = function(variable, value) { var res = {}; res[variable] = value; return res; },
+      peg$c98 = function(variable, value) { var res = {}; variable.set(res, value); return res; },
       peg$c99 = "[",
       peg$c100 = peg$literalExpectation("[", false),
       peg$c101 = function(e) { return e; },
@@ -45328,7 +45337,7 @@ function peg$parse(input, options) {
     if (s1 !== peg$FAILED) {
       s2 = peg$parsews();
       if (s2 !== peg$FAILED) {
-        s3 = peg$parseident();
+        s3 = peg$parseattrref();
         if (s3 !== peg$FAILED) {
           s4 = peg$parse_();
           if (s4 !== peg$FAILED) {
@@ -46782,10 +46791,10 @@ register_func('primitiveCylinder', 0, 3, isNumeric, false, func_cylinder);
 
 
 function Processor(grammar) {
-  this.data = {};
+  this.data = { cgajs: { maxStackDepth: 50 }};
   this.rules = { NIL : -1 };
 
-  Object.assign(this.data, grammar.attr);
+  Object.assign(this.data, grammar.attrs);
   grammar.rules.forEach(r => this.rules[r.name] = r);
 }
 
@@ -46831,7 +46840,9 @@ Processor.prototype.update = function (g) {
 
 Processor.prototype.process = function(lot) {
 
-  if (lot.faces[0].a !== 0) throw "I assume the first face uses the first vertex!" // TODO
+  this.depth = 0;
+
+  if (lot.faces[0].a !== 0) throw "I assume the first face uses the first vertex!"; // TODO
 
   var world = new THREE.Matrix4();
   world.makeRotationFromQuaternion(quat_from_first_face(lot));
@@ -46923,6 +46934,12 @@ Processor.prototype.applyOperations = function(ops) {
 
 Processor.prototype.applyRule = function(rule) {
 
+  this.depth ++;
+  if (this.depth > this.data.cgajs.maxStackDepth ) {
+    console.log("Reached max stack depth, stopping. Increase attr cgajs.maxStackDepth for more!");
+    return;
+  }
+
   if (!rule) {
     // leaf
     this.res.push(this.top);
@@ -46941,6 +46958,7 @@ Processor.prototype.applyRule = function(rule) {
     throw "Unknown rule type: "+typeof rule;
   }
 
+  this.depth--;
 };
 
 
