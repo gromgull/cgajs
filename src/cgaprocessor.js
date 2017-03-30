@@ -461,6 +461,22 @@ function func_cylinder(processor, sides, r, h) {
 
 }
 
+function func_center(processor, axis) {
+  if (processor.stack.length < 2) throw 'Not enough stuff on the stack';
+  var ref = processor.stack[processor.stack.length-2];
+  ref.computeBoundingBox();
+  processor.top.computeBoundingBox();
+  var c = ref.boundingBox.getCenter();
+  c.sub(processor.top.boundingBox.getCenter());
+
+  if ( axis.value.indexOf('x') == -1 ) c.x = 0;
+  if ( axis.value.indexOf('y') == -1 ) c.y = 0;
+  if ( axis.value.indexOf('z') == -1 ) c.z = 0;
+
+  processor.top.translate(c.x, c.y, c.z);
+
+}
+
 
 var FUNCTIONS = { };
 
@@ -581,6 +597,8 @@ function register_func(name, min_params, max_params, validator, hasBody, func) {
 register_func('s', 3, 3, isNumericOrRelative, false, func_scale);
 register_func('r', 3, 3, isNumeric, false, func_rotate);
 register_func('t', 3, 3, isNumericOrRelative, false, func_translate);
+
+register_func('center', 1, 1, isAxis, false, func_center);
 
 register_func('extrude', 1, 1, isNumeric, false, func_extrude);
 register_func('taper', 1, 1, isNumeric, false, func_taper);
