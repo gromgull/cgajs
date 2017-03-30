@@ -25,7 +25,7 @@ arrow = "-->"
 
 literal = float / int
 
-axis = value:('x'/'y'/'z'/'xy'/'xz'/'yz'/'xyz') { return new cga.Axis(value); }
+axis = value:('xyz'/'xz'/'yz'/'xy'/'x'/'y'/'z') { return new cga.Axis(value); }
 
 comp_selector = value:('f'/'e'/'v') { return new cga.CompSelector(value); }
 
