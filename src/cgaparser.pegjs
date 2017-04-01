@@ -3,11 +3,11 @@
 
 start = _ attrs:(attr *) rules:(rule *) _ { return new cga.CGA(attrs!==null && attrs.length ? Object.assign.apply({},attrs) : {}, rules); }
 
-_ = [ \t\r\n]*
+_ = ( [ \t\r] / nl )* { return null; }
 ws = [ \t]*
 indent = [ \t]+ { return text(); }
 
-nl = "\n"
+nl = ( "//" [^\n]* )? "\n"
 
 int = "-"?[0-9]+ { return parseInt(text()) }
 float = "-"?[0-9]+ "." [0-9]+ { return parseFloat(text()) }
