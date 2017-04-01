@@ -1,5 +1,5 @@
-var cga = require('./cga.js');
-var cgaparser = require('./cgaparser.js');
+var cga = require('cga');
+var cgaparser = require('../src/cgaparser.js');
 
 function t(g) {
   try {
@@ -18,7 +18,10 @@ function t(g) {
   }
 }
 
-t('attr a = 2\nattr b = 3\n');
+t('// comment\n');
+
+t('attr a.a = 2\nattr b.a = 3\n');
+t('attr a.a = 2 // it is a\nattr b.a = 3\n');
 
 t('Lot --> Cake\n');
 t('Lot --> Cake s(3.4)\n');
