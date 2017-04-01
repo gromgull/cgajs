@@ -1,10 +1,11 @@
 var THREE = require("three");
+var CodeMirror = require("codemirror");
 var OrbitControls = require('./orbitcontrols');
 var cgaparser = require("./cgaparser");
 var cgaprocessor = require("./cgaprocessor");
 
 require("./format");
-
+require("./cgamode.js");
 
 function $(sel) {
   return document.querySelector(sel);
@@ -63,6 +64,12 @@ function setup() {
   var examples = {};
 
 
+  var code = CodeMirror.fromTextArea($('textarea'), {
+    lineNumbers: true,
+    lineWrapping: true,
+    mode: "cga"
+  });
+
   $('.lot-selector').addEventListener('change', e => {
     lot=e.target.value;
     update();
@@ -75,7 +82,7 @@ function setup() {
 
     function set(val) {
       examples[e.target.value] = val;
-      $('textarea').value = val;
+      code.setValue(val);
       parse();
     }
     if (examples[e.target.value]) set(examples[e.target.value]);
@@ -83,7 +90,7 @@ function setup() {
   });
 
   var grammarText = localStorage.getItem('grammar');
-  if (grammarText) $('textarea').value = grammarText;
+  if (grammarText) code.setValue( grammarText );
 
 
   setupThreejs();
@@ -97,7 +104,7 @@ function setup() {
   window.addEventListener( 'resize', onWindowResize, false );
 
   var timeout;
-  $('textarea').addEventListener('keyup', e => {
+  code.on('change', e => {
     if (timeout) clearTimeout(timeout);
     timeout = setTimeout(parse, 500);
   } );
@@ -213,19 +220,20 @@ function setup() {
   }
 
   function parse() {
-    if ($('textarea').value == last) return;
-    $('#error').innerHTML = '';
+    if (code.getValue() == last) return;
+    $('#out').classList.remove('error');
     try {
-      last = $('textarea').value;
+      last = code.getValue();
       grammar = cgaparser.parse(last);
-      $('#out').innerHTML = String(grammar);
+      $('#out').innerHTML = 'ok!'; // String(grammar);
 
       localStorage.setItem('grammar', last);
       update();
 
     } catch (e) {
       console.log(e);
-      $('#error').innerHTML=e;
+      $('#out').innerHTML=(e.location?'At Line '+e.location.start.line : '') + '\n' + e ;
+      $('#out').classList.add('error');
       return ;
     }
   }

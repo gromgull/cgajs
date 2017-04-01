@@ -6,8 +6,9 @@
   "author": "Gunnar Aastrand Grimnes",
   "license": "BSD",
   "devDependencies": {
+    "codemirror": "^5.25.0",
     "pegjs": "^0.10.0",
-    "webpack": "^2.2.1",
-    "three": "^0.84.0"
+    "three": "^0.84.0",
+    "webpack": "^2.2.1"
   }
 }

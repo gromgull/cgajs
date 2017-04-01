@@ -2,7 +2,11 @@
   margin-top: 10px;
 }
 
-#error { color: red; }
+#out {
+  margin-top: 10px;
+  white-space: pre-wrap;
+}
+#out.error { color: red; }
 
 canvas { width: 100% ; height: 90% }
 
