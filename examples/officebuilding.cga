@@ -1,0 +1,9 @@
+Lot --> color("gray") extrude(3) split(y) { 0.1 : Ledge | 0.5 : Floor }*
+
+Ledge --> color("white") s('1.1, '1, '1.1) center(xz)
+
+Floor --> comp(f) { side: Side }
+
+Side --> split(x) { ~0.1 : X | 0.5: Window }*
+
+Window --> color("#000033")

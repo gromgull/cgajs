@@ -1,0 +1,14 @@
+
+Lot --> color("grey") extrude(1) comp(f) { front: Front | side: Side }
+
+Side --> extrude(0.1) split(y) {'0.9: SideWall | '0.1 : SideTop }
+
+SideTop --> split(x) { 0.09 : Block | 0.05: NIL }*
+
+Front --> split(x) { '0.3 : NIL | '0.4: Tower | '0.3 : Side }
+
+Tower --> extrude(0.12) t(0, 0, -0.01) s('1,'1.5, '1) split(y) { '0.4 : WallDoor | '0.4125 : Wall | '0.075 : SideTop }
+
+WallDoor --> split(x) { '0.2 : Wall | '0.6 : Door | '0.2 : Wall }
+
+Door --> color("brown")

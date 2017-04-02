@@ -1,17 +1,19 @@
+
+
 Lot --> color("white") extrude(2) split(y) { '0.5 : Bottom | '0.1 : Roof | '0.4 : Top }
 
-Roof --> split(z) { ~0.3 : NIL | ~0.3 : Roof2 | ~0.3 : NIL }
+Roof --> split(x) { ~0.3 : NIL | ~0.3 : Roof2 | ~0.3 : NIL }
 
 Roof2 --> R comp(f) { top: taper(0.1) color("red") }
 
-Bottom --> comp(f) { left: Front | front: Side | back : Side | right: Side | top: Roof1 }
+Bottom --> comp(f) { front: Front | left: Side | back : Side | right: Side | top: Roof1 }
 
 Roof1 --> taper(0.1) color("red")
 
 Front --> split(z) { ~0.3 : Wall }*
 
-Top --> split(x) { 0.5 : FrontT }
+Top --> split(z) { ~0.5 : NIL | 0.5 : FrontT }
 
-FrontT --> split(z) { ~0.1 : NIL | 0.5 : Tower | ~0.1 : NIL }
+FrontT --> split(x) { ~0.1 : NIL | 0.5 : Tower | ~0.1 : NIL }
 
 Tower --> T comp(f) { top: taper(0.5) color("red") }
