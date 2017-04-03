@@ -1,6 +1,6 @@
 Lot --> extrude(rand(0.8, 2)) comp(f) { front: Front | side: Side | top: Roof |  bottom: B }
 
-Roof -->  color("red") t('-0.05, 0, '0.05) s('1.1, '1, '1.1) taper(1) split(y) { 'rand(0.1, 1) : R }
+Roof -->  color("red") t('-0.05, 0, '0.05) s('1.1, '1, '1.1) taper(1) split(z) { 'rand(0.1, 1) : R }
 
 Front --> extrude(0.001) split(x) { ~0.3: Side | 0.6 : DoorWall | ~0.3: Side }
 
