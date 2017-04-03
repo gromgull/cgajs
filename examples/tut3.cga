@@ -1,0 +1,21 @@
+// A very powerful of generating new
+// geometry is by splitting existing
+// objects Below we split the initial
+// tower into three equal sized floors
+// Try adding new rules for each floor,
+// and split these again along the x
+// axis!
+//
+// Splits can also be done by either
+// relative or floating amounts using
+// either ' or ~ Try changing the
+// y-split for one of the below to '0.1
+// this will create a floor that is 10%
+// of the size of the original object.
+// Floats will resize to "use up" all
+// the size to be split.  You can also
+// add a * after the last } of the split
+// this repeats the whole split as many
+// times as it will fit.
+
+Lot --> extrude(3) split(y) { 1: FloorA | 1: FloorB | 1: FloorC }

@@ -1,0 +1,21 @@
+// Rules can invoke other rules, each
+// Rule will produce a new shape Below
+// the Lot is split into two other
+// rules, each producing an object
+//
+// CGA gives you lots of operations to
+// modify your objects, below we us `t`
+// (for translate) which takes x/y/z
+// coordinate and moves the object
+// There's also `s` and `r` for scale
+// and rotate.  We also use `color`, and
+// you'll never guess what it does.
+//
+// Try adding another yellow box,
+// rotated 180 degrees, position between
+// the others.
+
+Lot --> extrude(2) RedBox t(2,0,0) GreenBox
+
+RedBox --> color("red") F
+GreenBox --> color("green") F

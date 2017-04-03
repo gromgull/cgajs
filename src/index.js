@@ -63,6 +63,8 @@ function setup() {
 
   var examples = {};
 
+  var timeout;
+  var autoreload = true;
 
   var code = CodeMirror.fromTextArea($('textarea'), {
     lineNumbers: true,
@@ -80,18 +82,24 @@ function setup() {
   $('.example-selector').addEventListener('change', e => {
     if (!e.target.value) return;
 
-    function set(val) {
-      examples[e.target.value] = val;
-      code.setValue(val);
-      parse();
-    }
-    if (examples[e.target.value]) set(examples[e.target.value]);
-    else $.get('examples/'+e.target.value+'.cga', set);
+    loadExample(e.target.value);
   });
+
+  code.on('change', e => {
+    if (!autoreload) return;
+    if (timeout) clearTimeout(timeout);
+    timeout = setTimeout(parse, 500);
+  } );
+
+  $('canvas').addEventListener('keydown', e => { console.log(e); if (e.key==' ') controls.autoRotate = !controls.autoRotate; });
+
+  $('.grid-checkbox').addEventListener('change', e => toggleGrid($('.grid-checkbox').checked) );
+  $('.regenerate-checkbox').addEventListener('change', e => autoreload=!autoreload );
+
 
   var grammarText = localStorage.getItem('grammar');
   if (grammarText) code.setValue( grammarText );
-
+  else if (!code.getValue()) loadExample('tut1');
 
   setupThreejs();
 
@@ -103,16 +111,16 @@ function setup() {
 
   window.addEventListener( 'resize', onWindowResize, false );
 
-  var timeout;
-  code.on('change', e => {
-    if (timeout) clearTimeout(timeout);
-    timeout = setTimeout(parse, 500);
-  } );
 
-  $('canvas').addEventListener('keydown', e => { console.log(e); if (e.key==' ') controls.autoRotate = !controls.autoRotate; });
-
-  $('.grid-checkbox').addEventListener('change', e => toggleGrid($('.grid-checkbox').checked) );
-
+  function loadExample(example) {
+    function set(val) {
+      examples[example] = val;
+      code.setValue(val);
+      parse();
+    }
+    if (examples[example]) set(examples[example]);
+    else $.get('examples/'+example+'.cga', set);
+  }
 
   function toggleGrid(val) {
 

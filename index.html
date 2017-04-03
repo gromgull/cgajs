@@ -14,16 +14,16 @@
                 </div>
                 <div class="col-sm-4 lhs">
                     <div class="form-group">
-                        <textarea rows="20" class="form-control">Lot --> extrude(4) split(y) { 1 : Floor | 1: r(0,90,0) Floor | 1: r(0,180,0) Floor | 1: r(0,270,0) Floor}
-
-                        </textarea>
+                        <textarea rows="20" class="form-control"></textarea>
                         <pre id="out">
                         </pre>
 
                     </div>
 
-                    <form class="form-inline">
-                        <button type="button" id="updateBtn" class="btn btn-primary">regenerate</button>
+                    <form class="form">
+                        <div class="form-group">
+                            <button type="button" id="updateBtn" class="btn btn-primary">regenerate</button>
+                        </div>
 
                         <div class="form-group">
                             <label>Lot
@@ -39,19 +39,35 @@
                             </label>
                         </div>
                         <div class="form-group">
-                            <label>Show grid
+                            <label>
                                 <input type="checkbox" class="grid-checkbox">
+                                Show grid
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" checked class="regenerate-checkbox">
+                                Regenerate on changes
+
                             </label>
                         </div>
 
                         <div class="form-group">
                             <label>Example
                                 <select class="example-selector form-control">
-                                    <option value="">--pick one--</option>
-                                    <option>house</option>
-                                    <option>church</option>
-                                    <option>castle</option>
-                                    <option value="officebuilding">office building</option>
+                                    <optgroup label="tutorials">
+                                        <option value="tut1">Basics</option>
+                                        <option value="tut2">More rules</option>
+                                        <option value="tut3">Splitting</option>
+                                        <option value="tut4">Components</option>
+                                        <option value="tut5">addng randomness</option>
+                                    </optgroup>
+                                    <optgroup label="examples">
+                                        <option>house</option>
+                                        <option>church</option>
+                                        <option>castle</option>
+                                        <option value="officebuilding">office building</option>
+                                    </optgroup>
                                 </select>
                             </label>
                         </div>
@@ -80,7 +96,7 @@
                         <li>the grammar eval stack</li>
                         <li>the world/object/pivot coordinate systems/transforms</li>
                         <li>splitting in x/y/z axis (<code>split</code>)</li>
-                        <li>splitting into components (<code>comp</code>)</li>
+                        <li>splitting faces into components (<code>comp</code>)</li>
                         <li>single level stochastic rules</li>
                         <li>setting color (<code>color("red")</code>)</li>
                         <li><code>extrude</code> and <code>taper</code></li>
@@ -113,7 +129,7 @@
                     </ul>
 
                     <p>
-                        Have fun!
+                        Have fun! If you make anything cool I'd love for you to tell me on twitter: <a href=""https://twitter.com/gromgull">@gromgull</a>
                     </p>
                 </div>
 

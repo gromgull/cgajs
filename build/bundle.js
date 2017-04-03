@@ -52895,6 +52895,14 @@ CodeMirror.defineMode("cga", function (config) {
     return stream.match(/^[a-zA-Z_][a-zA-Z0-9_]*/);
   }
 
+  function floating(stream) {
+    return stream.match(/^~[0-9]+(?:\.[0-9]+)?/);
+  }
+
+  function relative(stream) {
+    return stream.match(/^'[0-9]+(?:\.[0-9]+)?/);
+  }
+
   return {
     startState: function () {
       return {
@@ -52964,7 +52972,11 @@ CodeMirror.defineMode("cga", function (config) {
       } else if (['[', ']', '(', ')'].indexOf(stream.peek()) != -1) {
         stream.next();
         return 'bracket';
-      } else if (!stream.eatSpace()) {
+      } else if (floating(stream)) {
+        return 'keyword';
+      } else if (relative(stream)) {
+        return 'number';
+      }else if (!stream.eatSpace()) {
         stream.next();
       }
       return null;
@@ -55840,7 +55852,10 @@ function func_comp(processor, selector, body) {
     if (p.head.name == 'side') ops = [ parts.front, parts.left, parts.right, parts.back ];
     if (p.head.name == 'all') ops = [ parts.top, parts.bottom, parts.front, parts.left, parts.right, parts.back ];
 
-
+    // TODO: The selection parameters of a component split work in a
+    // excluding manner: if a parameter has selected a specific
+    // component, this component cannot be part of another selection
+    // (from left to right).
     ops.forEach(part => {
       if (part) {
         var g = processor.create();
@@ -56304,7 +56319,10 @@ Processor.prototype.applyFunction = function(func) {
       FUNCTIONS[func.name](this, func);
     } else {
       console.log('applying', func.name);
+
+      this.stack.push( this.create().copy(this.top) );
       this.applyRule(this.rules[func.name]);
+      this.stack.pop();
     }
   };
 
@@ -58304,6 +58322,8 @@ function setup() {
 
   var examples = {};
 
+  var timeout;
+  var autoreload = true;
 
   var code = CodeMirror.fromTextArea($('textarea'), {
     lineNumbers: true,
@@ -58321,19 +58341,24 @@ function setup() {
   $('.example-selector').addEventListener('change', e => {
     if (!e.target.value) return;
 
-    function set(val) {
-      examples[e.target.value] = val;
-      code.setValue(val);
-      parse();
-    }
-    if (examples[e.target.value]) set(examples[e.target.value]);
-    else $.get('examples/'+e.target.value+'.cga', set);
+    loadExample(e.target.value);
   });
 
-  var grammarText = localStorage.getItem('grammar');
-  console.log('Setting from localStorage:', grammarText);
-  if (grammarText) code.setValue( grammarText );
+  code.on('change', e => {
+    if (!autoreload) return;
+    if (timeout) clearTimeout(timeout);
+    timeout = setTimeout(parse, 500);
+  } );
 
+  $('canvas').addEventListener('keydown', e => { console.log(e); if (e.key==' ') controls.autoRotate = !controls.autoRotate; });
+
+  $('.grid-checkbox').addEventListener('change', e => toggleGrid($('.grid-checkbox').checked) );
+  $('.regenerate-checkbox').addEventListener('change', e => autoreload=!autoreload );
+
+
+  var grammarText = localStorage.getItem('grammar');
+  if (grammarText) code.setValue( grammarText );
+  else if (!code.getValue()) loadExample('tut1');
 
   setupThreejs();
 
@@ -58345,16 +58370,16 @@ function setup() {
 
   window.addEventListener( 'resize', onWindowResize, false );
 
-  var timeout;
-  code.on('change', e => {
-    if (timeout) clearTimeout(timeout);
-    timeout = setTimeout(parse, 500);
-  } );
 
-  $('canvas').addEventListener('keydown', e => { console.log(e); if (e.key==' ') controls.autoRotate = !controls.autoRotate; });
-
-  $('.grid-checkbox').addEventListener('change', e => toggleGrid($('.grid-checkbox').checked) );
-
+  function loadExample(example) {
+    function set(val) {
+      examples[example] = val;
+      code.setValue(val);
+      parse();
+    }
+    if (examples[example]) set(examples[example]);
+    else $.get('examples/'+example+'.cga', set);
+  }
 
   function toggleGrid(val) {
 

@@ -1,0 +1,22 @@
+// Welcome to the CGA-processor/generator!
+//
+// Here you can write production rules
+// that become the instructions how
+// construct your masterpiece!
+//
+// Rules have a name, an arrow and a
+// list of operations to apply to the
+// current shape.
+//
+// The initial current shape is called
+// the "Lot" and is a flat polygon.
+// Typically this is the base of your
+// building. You can pick different
+// lot-shapes below.
+//
+// Currently the rule below does
+// nothing, it just shows the polygon.
+// Try giving the building some depth by
+// adding the operation: extrude(1)
+
+Lot -->

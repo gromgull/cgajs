@@ -1,0 +1,22 @@
+// In addition to splitting shapes along
+// axis, you can break them into
+// components with the `comp` function
+//
+// Each face becomes a new flat polygon,
+// this shape has it's own coordinate
+// system.  so the x-axis will always be
+// the way you expect, so you can write
+// rules for walls without worrying
+// about which way they face.
+//
+// Try adding an x-split and color the
+// center segment green to the Side rule
+// below.  See how it works for all
+// sides of the Lot, even if it's
+// triangular?
+
+Lot --> extrude(2) comp(f) { top: Top | front: Front | left: Side | right: Side | back: Side }
+
+Top --> taper(1)
+Front --> color("red") extrude(0.1)
+Side --> color("yellow")
