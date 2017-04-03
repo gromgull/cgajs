@@ -302,7 +302,10 @@ function func_comp(processor, selector, body) {
     if (p.head.name == 'side') ops = [ parts.front, parts.left, parts.right, parts.back ];
     if (p.head.name == 'all') ops = [ parts.top, parts.bottom, parts.front, parts.left, parts.right, parts.back ];
 
-
+    // TODO: The selection parameters of a component split work in a
+    // excluding manner: if a parameter has selected a specific
+    // component, this component cannot be part of another selection
+    // (from left to right).
     ops.forEach(part => {
       if (part) {
         var g = processor.create();
