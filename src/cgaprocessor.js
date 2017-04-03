@@ -814,7 +814,10 @@ Processor.prototype.applyFunction = function(func) {
       FUNCTIONS[func.name](this, func);
     } else {
       console.log('applying', func.name);
+
+      this.stack.push( this.create().copy(this.top) );
       this.applyRule(this.rules[func.name]);
+      this.stack.pop();
     }
   };
 
