@@ -1,6 +1,11 @@
 var THREE = require('three');
 var THREEBSP = require('./three-csg');
 
+function edgeIndex(a,b) {
+  if (a<b) return a+','+b;
+  else return b+','+a;
+}
+
 
 function split_geometry(axis, geometry, left, right) {
   if (!geometry.faces.length) return geometry;
@@ -12,11 +17,6 @@ function split_geometry(axis, geometry, left, right) {
 }
 
 function split_flat_geometry(axis, geometry, left, right) {
-
-  function edgeIndex(a,b) {
-    if (a<b) return a+','+b;
-    else return b+','+a;
-  }
 
   left += geometry.boundingBox.min[axis];
   right += geometry.boundingBox.min[axis];
@@ -262,5 +262,6 @@ function find_hard_edges( geometry, thresholdAngle ) {
 
 module.exports = {
   find_hard_edges: find_hard_edges,
-  split_geometry: split_geometry
+  split_geometry: split_geometry,
+  edgeIndex: edgeIndex
 };

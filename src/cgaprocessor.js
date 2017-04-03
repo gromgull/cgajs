@@ -7,15 +7,60 @@ function peek(arr) {
   return arr[arr.length-1];
 }
 
-function quat_from_first_face(g) {
+function quat_from_first_face(v1, v2, normal) {
   // CGA sub-shapes from comp have their coordinate system defined
   // by the first vertex + the x axis along first edge.
-  var pivot_x = g.vertices[g.faces[0].b].clone().sub(g.vertices[g.faces[0].a]).normalize();
+  // and the z-axis as the normal of the face
+
+  var xaxis = v2.clone().sub(v1).normalize();
 
   var quat = new THREE.Quaternion();
-  quat.setFromUnitVectors(new THREE.Vector3(1,0,0), pivot_x);
+  quat.setFromUnitVectors(xaxis, new THREE.Vector3(1,0,0));
+
+  if (normal)
+    quat.premultiply(new THREE.Quaternion().setFromUnitVectors(normal.clone().applyQuaternion(quat), new THREE.Vector3(0,0,1)));
+
+  quat.inverse();
 
   return quat;
+}
+
+function find_xaxis_edge(geometry) {
+
+  var y = new THREE.Vector3(0,1,0);
+
+  function vec(a) {
+    return geometry.vertices[a[1]].clone().sub(geometry.vertices[a[0]]);
+  }
+
+  function xang(e) {
+    return Math.abs(vec(e).dot(y));
+  }
+
+  var edges = [];
+  geometry.faces.forEach(f => {
+    edges.push([f.a, f.b, f], [f.b, f.c, f], [f.c, f.a, f]);
+  } );
+
+  var edgecount = {};
+  edges.forEach(e => {
+    var idx = polyutils.edgeIndex(e[0], e[1]) ;
+    if (!edgecount[idx]) edgecount[idx] = 0;
+    edgecount[idx] ++;
+  });
+
+  edges = edges.filter(e => edgecount[polyutils.edgeIndex(e[0], e[1])] == 1);
+
+  edges.sort((a,b) => xang(a)-xang(b));
+
+  var e = edges[0];
+
+  console.log('picked x as ', geometry.vertices[e[0]].clone().sub(geometry.vertices[e[1]]));
+
+  return [ geometry.vertices[e[0]],
+           geometry.vertices[e[1]],
+           e[2].normal ];
+
 }
 
 function clone_obj(obj) {
@@ -319,13 +364,37 @@ function func_comp(processor, selector, body) {
         });
 
         g.mergeVertices();
+        g.computeFaceNormals();
 
         processor.stack.push(g);
 
-        g.pivot = g.vertices[g.faces[0].a].clone();
-        g.pivotRotate = new THREE.Euler().setFromQuaternion( quat_from_first_face(g) );
+        // the comp operator rotates the new pieces to have the axis
+        // sensibly rotate:
 
-        // console.log('x axis', pivot_x, 'pivot', g.pivot, 'rot', g.pivotRotate);
+        // > The local coordinate systems (pivot and scope) of the newly
+        // > generated shapes are aligned according to the geometry's
+        // > topology; the component split is one of the few shape
+        // > operations which manipulate the pivot of a shape.
+
+        // > In the case of a face component split, the x-axis will be parallel
+        // > to the first edge of the face and the z-axis wil point along the
+        // > face's normal. The pivot will be positioned at the first vertex of
+        // > the first edge of the face; the scope will be the bounding box of
+        // > the face, i.e.the z-dimension of the emerging shape's scope is set
+        // > to zero.
+
+        // However, we have no guarantee that the first edge is the one we want,
+        // instead we find an outside edge that is close to perpendicular to the y axis
+
+        var edge = find_xaxis_edge(g);
+
+        var v1 = edge[0], v2 = edge[1], n = edge[2];
+
+        g.pivot = v1;
+
+        g.pivotRotate = quat_from_first_face(v1, v2, n);
+
+        // console.log('x axis', pivot_x, 'pivot', g.pivot, 'rot', g.pxivotRotate);
 
         processor.update_pivot_matrix();
 
@@ -642,7 +711,7 @@ Processor.prototype.create = function() {
 Processor.prototype.update_pivot_matrix = function() {
   // recalculate transform matrix from pivot + pivotRotate
   var g = this.top;
-  g.pivotTransform.makeRotationFromQuaternion(new THREE.Quaternion().setFromEuler(g.pivotRotate));
+  g.pivotTransform.makeRotationFromQuaternion(g.pivotRotate);
   g.pivotTransform.setPosition(g.pivot);
   g.pivotTransformInverse = new THREE.Matrix4().getInverse( g.pivotTransform );
 };
@@ -674,9 +743,11 @@ Processor.prototype.process = function(lot) {
 
   if (lot.faces[0].a !== 0) throw "I assume the first face uses the first vertex!"; // TODO
 
+  lot.computeFaceNormals();
+
   var world = new THREE.Matrix4();
-  world.makeRotationFromQuaternion(quat_from_first_face(lot));
-  world.setPosition( lot.vertices[0] );
+  world.makeRotationFromQuaternion(quat_from_first_face(lot.vertices[lot.faces[0].a], lot.vertices[lot.faces[0].b], null));
+  world.setPosition( lot.vertices[0].clone() );
 
   var inverse_world = new THREE.Matrix4();
   inverse_world.getInverse(world, true);
@@ -684,7 +755,7 @@ Processor.prototype.process = function(lot) {
   lot.applyMatrix(inverse_world);
 
   lot.pivot = new THREE.Vector3(0,0,0);
-  lot.pivotRotate = new THREE.Euler(0,0,0);
+  lot.pivotRotate = new THREE.Quaternion();
   lot.pivotTransform = new THREE.Matrix4();
   lot.pivotTransformInverse = new THREE.Matrix4();
 
