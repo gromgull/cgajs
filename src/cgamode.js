@@ -6,6 +6,14 @@ CodeMirror.defineMode("cga", function (config) {
     return stream.match(/^[a-zA-Z_][a-zA-Z0-9_]*/);
   }
 
+  function floating(stream) {
+    return stream.match(/^~[0-9]+(?:\.[0-9]+)?/);
+  }
+
+  function relative(stream) {
+    return stream.match(/^'[0-9]+(?:\.[0-9]+)?/);
+  }
+
   return {
     startState: function () {
       return {
@@ -75,7 +83,11 @@ CodeMirror.defineMode("cga", function (config) {
       } else if (['[', ']', '(', ')'].indexOf(stream.peek()) != -1) {
         stream.next();
         return 'bracket';
-      } else if (!stream.eatSpace()) {
+      } else if (floating(stream)) {
+        return 'keyword';
+      } else if (relative(stream)) {
+        return 'number';
+      }else if (!stream.eatSpace()) {
         stream.next();
       }
       return null;
